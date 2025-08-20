@@ -1,0 +1,400 @@
+syntax = "proto3";
+
+package n8nwork.workflow.v1;
+
+option go_package = "github.com/n8n-work/proto-contracts/gen/go/workflow/v1;workflowv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "execution.proto";
+
+// Workflow management service
+service WorkflowService {
+  // Create a new workflow
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+  
+  // Get workflow by ID
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  
+  // Update existing workflow
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (UpdateWorkflowResponse);
+  
+  // Delete workflow
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  
+  // List workflows
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+  
+  // Start workflow execution
+  rpc StartExecution(StartExecutionRequest) returns (StartExecutionResponse);
+  
+  // Get execution details
+  rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
+  
+  // List executions
+  rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse);
+  
+  // Cancel execution
+  rpc CancelExecution(CancelExecutionRequest) returns (CancelExecutionResponse);
+}
+
+// Workflow node definition
+message WorkflowNode {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string description = 4;
+  
+  // Node configuration as JSON
+  google.protobuf.Struct parameters = 5;
+  
+  // Position for UI
+  Position position = 6;
+  
+  // Execution policy overrides
+  n8nwork.execution.v1.StepPolicy policy = 7;
+  
+  // Node-specific metadata
+  map<string, string> metadata = 8;
+  
+  // Credential references
+  repeated string credential_ids = 9;
+  
+  // Whether this is a trigger node
+  bool is_trigger = 10;
+  
+  // Whether this node is disabled
+  bool disabled = 11;
+}
+
+// Connection between nodes
+message WorkflowConnection {
+  string source_node_id = 1;
+  string target_node_id = 2;
+  string source_output = 3; // output port name
+  string target_input = 4;  // input port name
+  
+  // Connection metadata
+  map<string, string> metadata = 5;
+}
+
+// Node position for UI
+message Position {
+  double x = 1;
+  double y = 2;
+}
+
+// Workflow trigger configuration
+message WorkflowTrigger {
+  string type = 1; // "webhook", "cron", "manual", "event"
+  
+  // Trigger configuration as JSON
+  google.protobuf.Struct config = 2;
+  
+  // Whether trigger is active
+  bool active = 3;
+  
+  // Trigger metadata
+  map<string, string> metadata = 4;
+}
+
+// Workflow definition
+message Workflow {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string tenant_id = 4;
+  
+  // Workflow nodes
+  repeated WorkflowNode nodes = 5;
+  
+  // Node connections
+  repeated WorkflowConnection connections = 6;
+  
+  // Trigger configuration
+  repeated WorkflowTrigger triggers = 7;
+  
+  // Workflow settings
+  WorkflowSettings settings = 8;
+  
+  // Version and timestamps
+  int32 version = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  string created_by = 12;
+  string updated_by = 13;
+  
+  // Workflow status
+  WorkflowStatus status = 14;
+  
+  // Tags for organization
+  repeated string tags = 15;
+  
+  // Workflow metadata
+  map<string, string> metadata = 16;
+}
+
+// Workflow settings
+message WorkflowSettings {
+  // Default execution timeout
+  int64 default_timeout_ms = 1;
+  
+  // Maximum concurrent executions
+  int32 max_concurrent_executions = 2;
+  
+  // Error handling strategy
+  string error_handling = 3; // "stop", "continue", "retry"
+  
+  // Default retry policy
+  n8nwork.execution.v1.RetryPolicy default_retry_policy = 4;
+  
+  // Execution priority
+  int32 priority = 5;
+  
+  // Resource limits
+  ResourceLimits resource_limits = 6;
+  
+  // Notification settings
+  NotificationSettings notifications = 7;
+}
+
+// Resource limits for workflow execution
+message ResourceLimits {
+  int64 max_memory_mb = 1;
+  int32 max_cpu_cores = 2;
+  int64 max_disk_mb = 3;
+  int32 max_network_connections = 4;
+  int64 max_execution_time_ms = 5;
+}
+
+// Notification settings
+message NotificationSettings {
+  bool notify_on_success = 1;
+  bool notify_on_failure = 2;
+  repeated string notification_channels = 3;
+}
+
+// Workflow status
+enum WorkflowStatus {
+  WORKFLOW_STATUS_UNSPECIFIED = 0;
+  WORKFLOW_STATUS_DRAFT = 1;
+  WORKFLOW_STATUS_ACTIVE = 2;
+  WORKFLOW_STATUS_INACTIVE = 3;
+  WORKFLOW_STATUS_ARCHIVED = 4;
+}
+
+// Execution status
+enum ExecutionStatus {
+  EXECUTION_STATUS_UNSPECIFIED = 0;
+  EXECUTION_STATUS_PENDING = 1;
+  EXECUTION_STATUS_RUNNING = 2;
+  EXECUTION_STATUS_COMPLETED = 3;
+  EXECUTION_STATUS_FAILED = 4;
+  EXECUTION_STATUS_CANCELLED = 5;
+  EXECUTION_STATUS_TIMEOUT = 6;
+  EXECUTION_STATUS_WAITING = 7; // Waiting for external event/approval
+}
+
+// Workflow execution details
+message WorkflowExecution {
+  string id = 1;
+  string workflow_id = 2;
+  string tenant_id = 3;
+  
+  // Execution status
+  ExecutionStatus status = 4;
+  
+  // Trigger information
+  string triggered_by = 5;
+  string trigger_type = 6;
+  google.protobuf.Struct trigger_data = 7;
+  
+  // Execution timeline
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+  int64 duration_ms = 10;
+  
+  // Step execution details
+  repeated StepExecution step_executions = 11;
+  
+  // Final outputs
+  google.protobuf.Struct outputs = 12;
+  
+  // Error information
+  string error_message = 13;
+  n8nwork.execution.v1.ErrorCode error_code = 14;
+  
+  // Execution metadata
+  map<string, string> metadata = 15;
+  
+  // Resource usage
+  ResourceUsage resource_usage = 16;
+}
+
+// Individual step execution within workflow
+message StepExecution {
+  string step_id = 1;
+  string node_id = 2;
+  string node_type = 3;
+  
+  // Step status
+  ExecutionStatus status = 4;
+  
+  // Execution timeline
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+  int64 duration_ms = 7;
+  
+  // Attempt information
+  int32 attempt = 8;
+  int32 max_attempts = 9;
+  
+  // Input/Output data
+  google.protobuf.Struct input_data = 10;
+  google.protobuf.Struct output_data = 11;
+  
+  // Error information
+  string error_message = 12;
+  n8nwork.execution.v1.ErrorCode error_code = 13;
+  
+  // Logs and artifacts
+  repeated n8nwork.execution.v1.LogLine logs = 14;
+  repeated n8nwork.execution.v1.Artifact artifacts = 15;
+  
+  // Performance metrics
+  map<string, double> metrics = 16;
+}
+
+// Resource usage tracking
+message ResourceUsage {
+  int64 cpu_time_ms = 1;
+  int64 memory_peak_mb = 2;
+  int64 memory_avg_mb = 3;
+  int64 disk_io_bytes = 4;
+  int64 network_io_bytes = 5;
+  int32 api_calls_made = 6;
+}
+
+// Create workflow request
+message CreateWorkflowRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated WorkflowNode nodes = 4;
+  repeated WorkflowConnection connections = 5;
+  repeated WorkflowTrigger triggers = 6;
+  WorkflowSettings settings = 7;
+  repeated string tags = 8;
+  map<string, string> metadata = 9;
+}
+
+// Create workflow response
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+// Get workflow request
+message GetWorkflowRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  int32 version = 3; // Optional: specific version
+}
+
+// Get workflow response
+message GetWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+// Update workflow request
+message UpdateWorkflowRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated WorkflowNode nodes = 5;
+  repeated WorkflowConnection connections = 6;
+  repeated WorkflowTrigger triggers = 7;
+  WorkflowSettings settings = 8;
+  repeated string tags = 9;
+  map<string, string> metadata = 10;
+}
+
+// Update workflow response
+message UpdateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+// Delete workflow request
+message DeleteWorkflowRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+}
+
+// Delete workflow response
+message DeleteWorkflowResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List workflows request
+message ListWorkflowsRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  string filter = 4; // Filter expression
+  string order_by = 5;
+  repeated string tags = 6;
+  WorkflowStatus status = 7;
+}
+
+// List workflows response
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Start execution request
+message StartExecutionRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  google.protobuf.Struct input_data = 3;
+  string triggered_by = 4;
+  string trigger_type = 5;
+  map<string, string> metadata = 6;
+}
+
+// Start execution response
+message StartExecutionResponse {
+  WorkflowExecution execution = 1;
+}
+
+// Get execution request
+message GetExecutionRequest {
+  string tenant_id = 1;
+  string execution_id = 2;
+  bool include_step_details = 3;
+}
+
+// Get execution response
+message GetExecutionResponse {
+  WorkflowExecution execution = 1;
+}
+
+// List executions request
+message ListExecutionsRequest {
+  string tenant_id = 1;
+  string workflow_id = 2; // Optional: filter by workflow
+  int32 page_size = 3;
+  string page_token = 4;
+  ExecutionStatus status = 5;
+  google.protobuf.Timestamp start_time = 6;
+  google.protobuf.Timestamp end_time = 7;
+}
+
+// List executions response
+message ListExecutionsResponse {
+  repeated WorkflowExecution executions = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}

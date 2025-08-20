@@ -1,0 +1,352 @@
+syntax = "proto3";
+
+package orchestrator;
+
+option go_package = "./proto/orchestrator";
+
+// Orchestrator service for workflow management and coordination
+service OrchestratorService {
+  // Workflow Management
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (UpdateWorkflowResponse);
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+  
+  // Execution Management
+  rpc StartExecution(StartExecutionRequest) returns (StartExecutionResponse);
+  rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
+  rpc StopExecution(StopExecutionRequest) returns (StopExecutionResponse);
+  rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse);
+  
+  // Authentication & Authorization
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // Tenant & Resource Management
+  rpc GetTenantQuotas(GetTenantQuotasRequest) returns (GetTenantQuotasResponse);
+  rpc UpdateTenantQuotas(UpdateTenantQuotasRequest) returns (UpdateTenantQuotasResponse);
+  
+  // Webhook Management
+  rpc RegisterWebhook(RegisterWebhookRequest) returns (RegisterWebhookResponse);
+  rpc UnregisterWebhook(UnregisterWebhookRequest) returns (UnregisterWebhookResponse);
+  
+  // Health Check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// Common types
+message Metadata {
+  map<string, string> labels = 1;
+  map<string, string> annotations = 2;
+  string created_at = 3;
+  string updated_at = 4;
+  string tenant_id = 5;
+  string user_id = 6;
+}
+
+message WorkflowNode {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  map<string, string> parameters = 4;
+  repeated string dependencies = 5;
+  NodePosition position = 6;
+  NodePolicy policy = 7;
+}
+
+message NodePosition {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message NodePolicy {
+  int32 timeout_seconds = 1;
+  int32 retry_count = 2;
+  string retry_strategy = 3;
+  repeated string allowed_domains = 4;
+  map<string, string> resource_limits = 5;
+}
+
+message Workflow {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated WorkflowNode nodes = 4;
+  repeated WorkflowEdge edges = 5;
+  Metadata metadata = 6;
+  WorkflowStatus status = 7;
+  string version = 8;
+}
+
+message WorkflowEdge {
+  string from_node = 1;
+  string to_node = 2;
+  string condition = 3;
+}
+
+enum WorkflowStatus {
+  WORKFLOW_STATUS_UNKNOWN = 0;
+  WORKFLOW_STATUS_DRAFT = 1;
+  WORKFLOW_STATUS_ACTIVE = 2;
+  WORKFLOW_STATUS_INACTIVE = 3;
+  WORKFLOW_STATUS_DEPRECATED = 4;
+}
+
+message Execution {
+  string id = 1;
+  string workflow_id = 2;
+  ExecutionStatus status = 3;
+  string started_at = 4;
+  string completed_at = 5;
+  map<string, string> context = 6;
+  repeated StepExecution steps = 7;
+  Metadata metadata = 8;
+  string trigger_data = 9;
+}
+
+message StepExecution {
+  string step_id = 1;
+  string node_id = 2;
+  StepStatus status = 3;
+  string started_at = 4;
+  string completed_at = 5;
+  string input_data = 6;
+  string output_data = 7;
+  string error_message = 8;
+  int32 retry_count = 9;
+}
+
+enum ExecutionStatus {
+  EXECUTION_STATUS_UNKNOWN = 0;
+  EXECUTION_STATUS_PENDING = 1;
+  EXECUTION_STATUS_RUNNING = 2;
+  EXECUTION_STATUS_SUCCESS = 3;
+  EXECUTION_STATUS_FAILED = 4;
+  EXECUTION_STATUS_CANCELLED = 5;
+  EXECUTION_STATUS_TIMEOUT = 6;
+}
+
+enum StepStatus {
+  STEP_STATUS_UNKNOWN = 0;
+  STEP_STATUS_PENDING = 1;
+  STEP_STATUS_RUNNING = 2;
+  STEP_STATUS_SUCCESS = 3;
+  STEP_STATUS_FAILED = 4;
+  STEP_STATUS_SKIPPED = 5;
+  STEP_STATUS_CANCELLED = 6;
+}
+
+// Request/Response messages
+message CreateWorkflowRequest {
+  Workflow workflow = 1;
+}
+
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetWorkflowRequest {
+  string workflow_id = 1;
+  string tenant_id = 2;
+}
+
+message GetWorkflowResponse {
+  Workflow workflow = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message UpdateWorkflowRequest {
+  Workflow workflow = 1;
+}
+
+message UpdateWorkflowResponse {
+  Workflow workflow = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message DeleteWorkflowRequest {
+  string workflow_id = 1;
+  string tenant_id = 2;
+}
+
+message DeleteWorkflowResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ListWorkflowsRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  string filter = 4;
+}
+
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
+  string next_page_token = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+message StartExecutionRequest {
+  string workflow_id = 1;
+  string tenant_id = 2;
+  map<string, string> context = 3;
+  string trigger_data = 4;
+}
+
+message StartExecutionResponse {
+  Execution execution = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetExecutionRequest {
+  string execution_id = 1;
+  string tenant_id = 2;
+}
+
+message GetExecutionResponse {
+  Execution execution = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message StopExecutionRequest {
+  string execution_id = 1;
+  string tenant_id = 2;
+  string reason = 3;
+}
+
+message StopExecutionResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ListExecutionsRequest {
+  string tenant_id = 1;
+  string workflow_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+  string filter = 5;
+}
+
+message ListExecutionsResponse {
+  repeated Execution executions = 1;
+  string next_page_token = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+message AuthenticateRequest {
+  oneof auth_method {
+    ApiKeyAuth api_key = 1;
+    OAuthAuth oauth = 2;
+    SSOAuth sso = 3;
+  }
+}
+
+message ApiKeyAuth {
+  string api_key = 1;
+}
+
+message OAuthAuth {
+  string access_token = 1;
+}
+
+message SSOAuth {
+  string id_token = 1;
+  string provider = 2;
+}
+
+message AuthenticateResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+  UserInfo user_info = 4;
+  bool success = 5;
+  string error_message = 6;
+}
+
+message UserInfo {
+  string user_id = 1;
+  string tenant_id = 2;
+  string email = 3;
+  repeated string roles = 4;
+  map<string, string> permissions = 5;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  UserInfo user_info = 2;
+  string error_message = 3;
+}
+
+message GetTenantQuotasRequest {
+  string tenant_id = 1;
+}
+
+message GetTenantQuotasResponse {
+  TenantQuotas quotas = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message TenantQuotas {
+  int32 max_workflows = 1;
+  int32 max_executions_per_minute = 2;
+  int32 max_concurrent_executions = 3;
+  int64 max_storage_bytes = 4;
+  int32 max_webhook_calls_per_minute = 5;
+}
+
+message UpdateTenantQuotasRequest {
+  string tenant_id = 1;
+  TenantQuotas quotas = 2;
+}
+
+message UpdateTenantQuotasResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message RegisterWebhookRequest {
+  string workflow_id = 1;
+  string tenant_id = 2;
+  string webhook_url = 3;
+  repeated string events = 4;
+  map<string, string> headers = 5;
+}
+
+message RegisterWebhookResponse {
+  string webhook_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message UnregisterWebhookRequest {
+  string webhook_id = 1;
+  string tenant_id = 2;
+}
+
+message UnregisterWebhookResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string status = 1;
+  map<string, string> details = 2;
+}

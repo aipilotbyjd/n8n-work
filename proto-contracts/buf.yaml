@@ -1,0 +1,18 @@
+version: v1
+name: buf.build/n8n-work/proto-contracts
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - DEFAULT
+  except:
+    - UNARY_RPC
+    - COMMENT_FIELD
+    - SERVICE_SUFFIX
+  ignore:
+    - google/protobuf
+breaking:
+  use:
+    - FILE
+  ignore:
+    - google/protobuf

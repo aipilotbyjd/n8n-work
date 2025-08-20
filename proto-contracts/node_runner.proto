@@ -1,0 +1,329 @@
+syntax = "proto3";
+
+package node_runner;
+
+option go_package = "./proto/node_runner";
+
+import "orchestrator.proto";
+import "engine.proto";
+
+// Node Runner service for executing workflow nodes
+service NodeRunnerService {
+  // Node Execution
+  rpc ExecuteNode(ExecuteNodeRequest) returns (ExecuteNodeResponse);
+  rpc CancelNodeExecution(CancelNodeExecutionRequest) returns (CancelNodeExecutionResponse);
+  
+  // Node Management
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+  rpc UnregisterNode(UnregisterNodeRequest) returns (UnregisterNodeResponse);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  rpc GetNodeSchema(GetNodeSchemaRequest) returns (GetNodeSchemaResponse);
+  
+  // Plugin Management
+  rpc InstallPlugin(InstallPluginRequest) returns (InstallPluginResponse);
+  rpc UninstallPlugin(UninstallPluginRequest) returns (UninstallPluginResponse);
+  rpc ValidatePlugin(ValidatePluginRequest) returns (ValidatePluginResponse);
+  
+  // Runtime Management
+  rpc GetRunnerStatus(GetRunnerStatusRequest) returns (GetRunnerStatusResponse);
+  rpc UpdateSecurityPolicy(UpdateSecurityPolicyRequest) returns (UpdateSecurityPolicyResponse);
+  
+  // Health Check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message ExecuteNodeRequest {
+  string execution_id = 1;
+  string step_id = 2;
+  string node_type = 3;
+  map<string, string> parameters = 4;
+  string input_data = 5;
+  orchestrator.NodePolicy policy = 6;
+  SecurityContext security_context = 7;
+  RuntimeConfig runtime_config = 8;
+}
+
+message SecurityContext {
+  string tenant_id = 1;
+  repeated string allowed_domains = 2;
+  map<string, string> environment_variables = 3;
+  NetworkPolicy network_policy = 4;
+  IsolationLevel isolation_level = 5;
+}
+
+message NetworkPolicy {
+  repeated string allowed_hosts = 1;
+  repeated int32 allowed_ports = 2;
+  bool allow_private_networks = 3;
+  bool allow_localhost = 4;
+  int32 max_requests_per_minute = 5;
+}
+
+enum IsolationLevel {
+  ISOLATION_NONE = 0;
+  ISOLATION_VM2 = 1;
+  ISOLATION_PROCESS = 2;
+  ISOLATION_MICROVM = 3;
+  ISOLATION_WASM = 4;
+}
+
+message RuntimeConfig {
+  int32 timeout_seconds = 1;
+  int64 max_memory_bytes = 2;
+  int32 max_cpu_millicores = 3;
+  bool enable_debugging = 4;
+  map<string, string> runtime_options = 5;
+}
+
+message ExecuteNodeResponse {
+  bool success = 1;
+  string output_data = 2;
+  string error_message = 3;
+  NodeExecutionMetrics metrics = 4;
+  repeated string logs = 5;
+}
+
+message NodeExecutionMetrics {
+  int64 execution_time_ms = 1;
+  int64 memory_used_bytes = 2;
+  int32 cpu_time_ms = 3;
+  int32 network_requests = 4;
+  int64 network_bytes_sent = 5;
+  int64 network_bytes_received = 6;
+  int32 file_operations = 7;
+}
+
+message CancelNodeExecutionRequest {
+  string execution_id = 1;
+  string step_id = 2;
+  string reason = 3;
+}
+
+message CancelNodeExecutionResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message RegisterNodeRequest {
+  NodeDefinition node = 1;
+}
+
+message NodeDefinition {
+  string name = 1;
+  string type = 2;
+  string version = 3;
+  string description = 4;
+  NodeSchema input_schema = 5;
+  NodeSchema output_schema = 6;
+  NodeCapabilities capabilities = 7;
+  string implementation_url = 8; // for external nodes
+  bytes implementation_code = 9; // for inline nodes
+  string signature = 10; // cryptographic signature
+}
+
+message NodeSchema {
+  string json_schema = 1;
+  repeated string required_fields = 2;
+  map<string, string> field_descriptions = 3;
+}
+
+message NodeCapabilities {
+  bool supports_async = 1;
+  bool supports_cancellation = 2;
+  bool requires_credentials = 3;
+  bool supports_batch = 4;
+  repeated string supported_auth_methods = 5;
+  ResourceRequirements resource_requirements = 6;
+}
+
+message ResourceRequirements {
+  int64 min_memory_bytes = 1;
+  int64 max_memory_bytes = 2;
+  int32 min_cpu_millicores = 3;
+  int32 max_cpu_millicores = 4;
+  bool requires_network_access = 5;
+  bool requires_file_system = 6;
+}
+
+message RegisterNodeResponse {
+  bool success = 1;
+  string error_message = 2;
+  string node_id = 3;
+}
+
+message UnregisterNodeRequest {
+  string node_id = 1;
+}
+
+message UnregisterNodeResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ListNodesRequest {
+  string category = 1;
+  string search_query = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListNodesResponse {
+  repeated NodeDefinition nodes = 1;
+  string next_page_token = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+message GetNodeSchemaRequest {
+  string node_type = 1;
+  string version = 2;
+}
+
+message GetNodeSchemaResponse {
+  NodeDefinition node = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message InstallPluginRequest {
+  Plugin plugin = 1;
+  bool verify_signature = 2;
+}
+
+message Plugin {
+  string name = 1;
+  string version = 2;
+  string author = 3;
+  string description = 4;
+  repeated NodeDefinition nodes = 5;
+  PluginManifest manifest = 6;
+  bytes package_data = 7;
+  string signature = 8;
+}
+
+message PluginManifest {
+  string plugin_id = 1;
+  string name = 2;
+  string version = 3;
+  string api_version = 4;
+  repeated string dependencies = 5;
+  PluginPermissions permissions = 6;
+  map<string, string> metadata = 7;
+}
+
+message PluginPermissions {
+  bool network_access = 1;
+  bool file_system_access = 2;
+  bool environment_access = 3;
+  repeated string allowed_domains = 4;
+  repeated string required_secrets = 5;
+}
+
+message InstallPluginResponse {
+  bool success = 1;
+  string error_message = 2;
+  string plugin_id = 3;
+  repeated string installed_nodes = 4;
+}
+
+message UninstallPluginRequest {
+  string plugin_id = 1;
+}
+
+message UninstallPluginResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated string removed_nodes = 3;
+}
+
+message ValidatePluginRequest {
+  Plugin plugin = 1;
+}
+
+message ValidatePluginResponse {
+  bool valid = 1;
+  repeated string validation_errors = 2;
+  SecurityAssessment security_assessment = 3;
+}
+
+message SecurityAssessment {
+  SecurityLevel security_level = 1;
+  repeated string potential_risks = 2;
+  repeated string required_permissions = 3;
+  bool signature_valid = 4;
+}
+
+enum SecurityLevel {
+  SECURITY_UNKNOWN = 0;
+  SECURITY_SAFE = 1;
+  SECURITY_LOW_RISK = 2;
+  SECURITY_MEDIUM_RISK = 3;
+  SECURITY_HIGH_RISK = 4;
+  SECURITY_DANGEROUS = 5;
+}
+
+message GetRunnerStatusRequest {
+  string runner_id = 1;
+}
+
+message GetRunnerStatusResponse {
+  RunnerStatus status = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message RunnerStatus {
+  string runner_id = 1;
+  RunnerState state = 2;
+  int32 active_executions = 3;
+  int32 queued_executions = 4;
+  ResourceUsage resource_usage = 5;
+  repeated string loaded_plugins = 6;
+  map<string, string> capabilities = 7;
+  string last_heartbeat = 8;
+}
+
+enum RunnerState {
+  RUNNER_STATE_UNKNOWN = 0;
+  RUNNER_STATE_INITIALIZING = 1;
+  RUNNER_STATE_READY = 2;
+  RUNNER_STATE_BUSY = 3;
+  RUNNER_STATE_DRAINING = 4;
+  RUNNER_STATE_ERROR = 5;
+}
+
+message ResourceUsage {
+  int64 memory_used_bytes = 1;
+  int32 cpu_used_millicores = 2;
+  int32 active_processes = 3;
+  int32 open_file_descriptors = 4;
+  int64 network_bytes_sent = 5;
+  int64 network_bytes_received = 6;
+}
+
+message UpdateSecurityPolicyRequest {
+  string runner_id = 1;
+  SecurityPolicy policy = 2;
+}
+
+message SecurityPolicy {
+  IsolationLevel default_isolation = 1;
+  NetworkPolicy default_network_policy = 2;
+  repeated string trusted_domains = 3;
+  repeated string blocked_domains = 4;
+  map<string, string> environment_whitelist = 5;
+  bool allow_code_execution = 6;
+  bool allow_native_modules = 7;
+}
+
+message UpdateSecurityPolicyResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  map<string, string> details = 2;
+}

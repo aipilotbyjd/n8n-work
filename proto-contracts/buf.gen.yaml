@@ -1,0 +1,42 @@
+version: v1
+plugins:
+  # Go code generation
+  - plugin: buf.build/protocolbuffers/go
+    out: ../engine-go/proto
+    opt: 
+      - module=github.com/n8n-work/proto-contracts/gen/go
+      - paths=source_relative
+  
+  # Go gRPC code generation
+  - plugin: buf.build/grpc/go
+    out: ../engine-go/proto
+    opt:
+      - module=github.com/n8n-work/proto-contracts/gen/go
+      - paths=source_relative
+  
+  # TypeScript code generation
+  - plugin: buf.build/connectrpc/es
+    out: ../orchestrator-nest/proto
+    opt:
+      - target=ts
+      - import_extension=.js
+  
+  # TypeScript definitions
+  - plugin: buf.build/bufbuild/es
+    out: ../orchestrator-nest/proto
+    opt:
+      - target=ts
+      - import_extension=.js
+  
+  # Node.js TypeScript for runner
+  - plugin: buf.build/connectrpc/es
+    out: ../node-runner-js/proto
+    opt:
+      - target=ts
+      - import_extension=.js
+  
+  - plugin: buf.build/bufbuild/es
+    out: ../node-runner-js/proto
+    opt:
+      - target=ts
+      - import_extension=.js

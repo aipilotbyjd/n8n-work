@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package n8nwork.health.v1;
+
+option go_package = "github.com/n8n-work/proto-contracts/gen/go/health/v1;healthv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Health check service for all components
+service HealthService {
+  // Standard health check
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // Streaming health check
+  rpc Watch(HealthCheckRequest) returns (stream HealthCheckResponse);
+  
+  // Readiness check (can serve traffic)
+  rpc Ready(ReadinessCheckRequest) returns (ReadinessCheckResponse);
+  
+  // Liveness check (service is alive)
+  rpc Live(LivenessCheckRequest) returns (LivenessCheckResponse);
+}
+
+// Health check request
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  
+  ServingStatus status = 1;
+  string message = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  
+  // Additional service info
+  ServiceInfo service_info = 4;
+  
+  // Health details
+  repeated HealthDetail details = 5;
+}
+
+// Service information
+message ServiceInfo {
+  string name = 1;
+  string version = 2;
+  string build = 3;
+  google.protobuf.Timestamp start_time = 4;
+  map<string, string> metadata = 5;
+}
+
+// Individual health check detail
+message HealthDetail {
+  string component = 1;
+  ServingStatus status = 2;
+  string message = 3;
+  map<string, string> metrics = 4;
+  google.protobuf.Timestamp last_check = 5;
+}
+
+// Readiness check request
+message ReadinessCheckRequest {
+  string service = 1;
+}
+
+// Readiness check response
+message ReadinessCheckResponse {
+  bool ready = 1;
+  string message = 2;
+  repeated DependencyStatus dependencies = 3;
+}
+
+// Dependency status
+message DependencyStatus {
+  string name = 1;
+  string type = 2; // "database", "message_queue", "cache", "external_api"
+  bool healthy = 3;
+  string message = 4;
+  int64 response_time_ms = 5;
+  google.protobuf.Timestamp last_check = 6;
+}
+
+// Liveness check request  
+message LivenessCheckRequest {
+  string service = 1;
+}
+
+// Liveness check response
+message LivenessCheckResponse {
+  bool alive = 1;
+  string message = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}

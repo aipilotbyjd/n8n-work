@@ -1,0 +1,44 @@
+{
+  "name": "@n8n-work/docs",
+  "version": "1.0.0",
+  "description": "N8N-Work platform documentation",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "serve": "vitepress serve",
+    "lint": "eslint --ext .js,.ts,.vue .",
+    "lint:fix": "eslint --ext .js,.ts,.vue . --fix"
+  },
+  "keywords": [
+    "n8n-work",
+    "documentation",
+    "workflow",
+    "automation",
+    "vitepress"
+  ],
+  "author": "N8N-Work Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@mdit-vue/shared": "^0.12.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "eslint-plugin-vue": "^9.19.0",
+    "markdown-it": "^13.0.2",
+    "typescript": "^5.3.0",
+    "vitepress": "^1.0.0",
+    "vue": "^3.3.8"
+  },
+  "dependencies": {
+    "@vueuse/core": "^10.6.0",
+    "mermaid": "^10.6.0",
+    "vue-router": "^4.2.5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

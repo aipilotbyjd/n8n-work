@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  node-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: n8n-work-node-runner
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - RABBITMQ_EXCHANGE=n8n_work_steps
+      - RABBITMQ_QUEUE=node_runner_queue
+      - RABBITMQ_ROUTING_KEY=node.execute
+      - RABBITMQ_RESULTS_EXCHANGE=n8n_work_results
+      - RABBITMQ_RESULTS_ROUTING_KEY=execution.result
+      - OTEL_SERVICE_NAME=n8n-work-node-runner
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:14268/api/traces
+      - SANDBOX_STRATEGY=vm2
+      - MAX_EXECUTION_TIME=30000
+      - MAX_MEMORY_USAGE=512
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+      - rabbitmq
+      - jaeger
+    volumes:
+      - ./logs:/app/logs
+      - /tmp/n8n-work-sandbox:/tmp/n8n-work-sandbox
+    networks:
+      - n8n-work
+
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-work-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - n8n-work
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: n8n-work-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - n8n-work
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: n8n-work-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - n8n-work
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  n8n-work:
+    driver: bridge

@@ -1,0 +1,253 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: n8n-work-postgres
+    environment:
+      POSTGRES_DB: n8nwork
+      POSTGRES_USER: n8nwork
+      POSTGRES_PASSWORD: n8nwork_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8nwork"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3.11-management-alpine
+    container_name: n8n-work-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: n8nwork
+      RABBITMQ_DEFAULT_PASS: n8nwork_dev
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-work-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ClickHouse for Analytics
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3-alpine
+    container_name: n8n-work-clickhouse
+    environment:
+      CLICKHOUSE_DB: n8nwork_analytics
+      CLICKHOUSE_USER: n8nwork
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      CLICKHOUSE_PASSWORD: n8nwork_dev
+    ports:
+      - "8123:8123" # HTTP interface
+      - "9000:9000" # Native client
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # Object Storage (MinIO)
+  minio:
+    image: minio/minio:latest
+    container_name: n8n-work-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: n8nwork
+      MINIO_ROOT_PASSWORD: n8nwork_dev
+    ports:
+      - "9000:9000"   # API port
+      - "9001:9001"   # Console port
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: n8n-work-otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics
+    depends_on:
+      - tempo
+      - loki
+
+  # Tempo for Distributed Tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: n8n-work-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317:4317"   # OTLP gRPC
+
+  # Loki for Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: n8n-work-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # Prometheus for Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: n8n-work-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  # Grafana for Observability Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: n8n-work-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  # Orchestrator Service (NestJS)
+  orchestrator:
+    build:
+      context: ../orchestrator-nest
+      dockerfile: Dockerfile
+    container_name: n8n-work-orchestrator
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://n8nwork:n8nwork_dev@postgres:5432/n8nwork
+      RABBITMQ_URL: amqp://n8nwork:n8nwork_dev@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../orchestrator-nest:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  # Engine Service (Go)
+  engine:
+    build:
+      context: ../engine-go
+      dockerfile: Dockerfile
+    container_name: n8n-work-engine
+    environment:
+      GRPC_ADDR: :50051
+      POSTGRES_URL: postgres://n8nwork:n8nwork_dev@postgres:5432/n8nwork?sslmode=disable
+      RABBITMQ_URL: amqp://n8nwork:n8nwork_dev@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      CLICKHOUSE_URL: http://clickhouse:8123
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Node Runner Service (Node.js)
+  node-runner:
+    build:
+      context: ../node-runner-js
+      dockerfile: Dockerfile
+    container_name: n8n-work-node-runner
+    environment:
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://n8nwork:n8nwork_dev@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: n8nwork
+      MINIO_SECRET_KEY: n8nwork_dev
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../node-runner-js:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  clickhouse_data:
+  minio_data:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: n8n-work-network

@@ -1,0 +1,221 @@
+syntax = "proto3";
+
+package n8nwork.execution.v1;
+
+option go_package = "github.com/n8n-work/proto-contracts/gen/go/execution/v1;executionv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+// Core execution service for workflow steps
+service ExecutionService {
+  // Execute a single workflow step
+  rpc ExecuteStep(StepExecRequest) returns (StepExecResponse);
+  
+  // Get execution status
+  rpc GetExecutionStatus(GetExecutionStatusRequest) returns (GetExecutionStatusResponse);
+  
+  // Cancel execution
+  rpc CancelExecution(CancelExecutionRequest) returns (CancelExecutionResponse);
+  
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// Retry policy configuration
+message RetryPolicy {
+  int32 max_attempts = 1;
+  string strategy = 2; // "exponential", "linear", "fixed"
+  int64 base_delay_ms = 3;
+  double jitter_factor = 4;
+  int64 max_delay_ms = 5;
+}
+
+// Step execution policy
+message StepPolicy {
+  int64 timeout_ms = 1;
+  RetryPolicy retry_policy = 2;
+  bool continue_on_error = 3;
+  map<string, string> environment = 4;
+}
+
+// Error classification for handling
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_NONE = 1;
+  ERROR_CODE_TRANSIENT = 2;
+  ERROR_CODE_FATAL = 3;
+  ERROR_CODE_TIMEOUT = 4;
+  ERROR_CODE_CANCELLED = 5;
+  ERROR_CODE_RATE_LIMIT = 6;
+  ERROR_CODE_AUTHORIZATION = 7;
+  ERROR_CODE_INVALID_INPUT = 8;
+}
+
+// Data classification for compliance
+enum DataClass {
+  DATA_CLASS_UNSPECIFIED = 0;
+  DATA_CLASS_GENERIC = 1;
+  DATA_CLASS_PII = 2;
+  DATA_CLASS_PHI = 3;
+  DATA_CLASS_SECRET = 4;
+  DATA_CLASS_FINANCIAL = 5;
+}
+
+// File artifact reference
+message Artifact {
+  string name = 1;
+  string url = 2;
+  DataClass data_class = 3;
+  int64 bytes = 4;
+  string mime_type = 5;
+  map<string, string> metadata = 6;
+}
+
+// Log line from step execution
+message LogLine {
+  google.protobuf.Timestamp timestamp = 1;
+  string level = 2; // "debug", "info", "warn", "error"
+  string message = 3;
+  map<string, string> fields = 4;
+}
+
+// Runtime capabilities reported by node runner
+message Capabilities {
+  bool supports_async_nodes = 1;
+  bool supports_wasm = 2;
+  bool supports_microvm = 3;
+  repeated string allowed_egress_domains = 4;
+  repeated string supported_isolation_levels = 5;
+  map<string, string> runtime_info = 6;
+}
+
+// Step execution request
+message StepExecRequest {
+  string tenant_id = 1;
+  string run_id = 2;
+  string step_id = 3;
+  string node_type = 4;
+  
+  // Input data as JSON
+  bytes input_json = 5;
+  
+  // Credentials as encrypted JSON
+  bytes credentials_json = 6;
+  
+  // Execution policy
+  StepPolicy policy = 7;
+  
+  // Idempotency key for retries
+  string idempotency_key = 8;
+  
+  // Input artifacts
+  repeated Artifact input_artifacts = 9;
+  
+  // Additional context tags
+  map<string, string> tags = 10;
+  
+  // Node configuration
+  bytes node_config_json = 11;
+  
+  // Parent trace context
+  map<string, string> trace_context = 12;
+}
+
+// Step execution response
+message StepExecResponse {
+  string tenant_id = 1;
+  string run_id = 2;
+  string step_id = 3;
+  bool success = 4;
+  
+  // Output data as JSON
+  bytes output_json = 5;
+  
+  // Error details as JSON
+  bytes error_json = 6;
+  
+  // Error classification
+  ErrorCode error_code = 7;
+  
+  // Performance metrics
+  map<string, double> metrics = 8;
+  
+  // Output artifacts
+  repeated Artifact output_artifacts = 9;
+  
+  // Execution logs
+  repeated LogLine logs = 10;
+  
+  // Additional diagnostic information
+  string diagnostics = 11;
+  
+  // Suggested retry delay for transient errors
+  int64 retry_after_ms = 12;
+  
+  // Execution timestamps
+  google.protobuf.Timestamp started_at = 13;
+  google.protobuf.Timestamp completed_at = 14;
+}
+
+// Execution status request
+message GetExecutionStatusRequest {
+  string tenant_id = 1;
+  string run_id = 2;
+  string step_id = 3;
+}
+
+// Execution status response
+message GetExecutionStatusResponse {
+  string tenant_id = 1;
+  string run_id = 2;
+  string step_id = 3;
+  
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_PENDING = 1;
+    STATUS_RUNNING = 2;
+    STATUS_COMPLETED = 3;
+    STATUS_FAILED = 4;
+    STATUS_CANCELLED = 5;
+    STATUS_TIMEOUT = 6;
+  }
+  
+  Status status = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  string message = 6;
+  map<string, string> metadata = 7;
+}
+
+// Cancel execution request
+message CancelExecutionRequest {
+  string tenant_id = 1;
+  string run_id = 2;
+  string step_id = 3;
+  string reason = 4;
+}
+
+// Cancel execution response
+message CancelExecutionResponse {
+  bool cancelled = 1;
+  string message = 2;
+}
+
+// Health check request
+message HealthRequest {
+  string service = 1;
+}
+
+// Health check response
+message HealthResponse {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_SERVING = 1;
+    STATUS_NOT_SERVING = 2;
+    STATUS_SERVICE_UNKNOWN = 3;
+  }
+  
+  Status status = 1;
+  string message = 2;
+  Capabilities capabilities = 3;
+}

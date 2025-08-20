@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package engine;
+
+option go_package = "./proto/engine";
+
+import "orchestrator.proto";
+
+// Engine service for workflow execution management
+service EngineService {
+  // Execution Management
+  rpc RunWorkflow(RunWorkflowRequest) returns (RunWorkflowResponse);
+  rpc StepExec(StepExecRequest) returns (StepExecResponse);
+  rpc StepDone(StepDoneRequest) returns (StepDoneResponse);
+  rpc CancelExecution(CancelExecutionRequest) returns (CancelExecutionResponse);
+  
+  // Status and Monitoring
+  rpc GetExecutionStatus(GetExecutionStatusRequest) returns (GetExecutionStatusResponse);
+  rpc ListActiveExecutions(ListActiveExecutionsRequest) returns (ListActiveExecutionsResponse);
+  
+  // Resource Management
+  rpc GetResourceUsage(GetResourceUsageRequest) returns (GetResourceUsageResponse);
+  rpc UpdateRateLimits(UpdateRateLimitsRequest) returns (UpdateRateLimitsResponse);
+  
+  // Health Check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message RunWorkflowRequest {
+  string execution_id = 1;
+  orchestrator.Workflow workflow = 2;
+  map<string, string> context = 3;
+  string trigger_data = 4;
+  string tenant_id = 5;
+  ExecutionConfig config = 6;
+}
+
+message ExecutionConfig {
+  int32 timeout_seconds = 1;
+  int32 max_retries = 2;
+  bool enable_parallel_execution = 3;
+  map<string, string> environment_variables = 4;
+  ResourceLimits resource_limits = 5;
+}
+
+message ResourceLimits {
+  int64 max_memory_bytes = 1;
+  int32 max_cpu_millicores = 2;
+  int32 max_execution_time_seconds = 3;
+  int32 max_network_requests = 4;
+}
+
+message RunWorkflowResponse {
+  string execution_id = 1;
+  bool success = 2;
+  string error_message = 3;
+  repeated string scheduled_steps = 4;
+}
+
+message StepExecRequest {
+  string execution_id = 1;
+  string step_id = 2;
+  string node_id = 3;
+  string node_type = 4;
+  map<string, string> parameters = 5;
+  string input_data = 6;
+  orchestrator.NodePolicy policy = 7;
+  string tenant_id = 8;
+}
+
+message StepExecResponse {
+  bool success = 1;
+  string error_message = 2;
+  string assigned_runner = 3;
+}
+
+message StepDoneRequest {
+  string execution_id = 1;
+  string step_id = 2;
+  orchestrator.StepStatus status = 3;
+  string output_data = 4;
+  string error_message = 5;
+  int32 retry_count = 6;
+  ExecutionMetrics metrics = 7;
+}
+
+message ExecutionMetrics {
+  int64 execution_time_ms = 1;
+  int64 memory_used_bytes = 2;
+  int32 network_requests_count = 3;
+  int64 network_bytes_sent = 4;
+  int64 network_bytes_received = 5;
+}
+
+message StepDoneResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated string next_steps = 3;
+}
+
+message CancelExecutionRequest {
+  string execution_id = 1;
+  string reason = 2;
+  string tenant_id = 3;
+}
+
+message CancelExecutionResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated string cancelled_steps = 3;
+}
+
+message GetExecutionStatusRequest {
+  string execution_id = 1;
+  string tenant_id = 2;
+}
+
+message GetExecutionStatusResponse {
+  orchestrator.ExecutionStatus status = 1;
+  repeated orchestrator.StepExecution steps = 2;
+  ExecutionProgress progress = 3;
+  bool success = 4;
+  string error_message = 5;
+}
+
+message ExecutionProgress {
+  int32 total_steps = 1;
+  int32 completed_steps = 2;
+  int32 failed_steps = 3;
+  int32 running_steps = 4;
+  int32 pending_steps = 5;
+  double completion_percentage = 6;
+}
+
+message ListActiveExecutionsRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListActiveExecutionsResponse {
+  repeated ActiveExecution executions = 1;
+  string next_page_token = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+message ActiveExecution {
+  string execution_id = 1;
+  string workflow_id = 2;
+  orchestrator.ExecutionStatus status = 3;
+  string started_at = 4;
+  ExecutionProgress progress = 5;
+  ResourceUsage resource_usage = 6;
+}
+
+message GetResourceUsageRequest {
+  string tenant_id = 1;
+  string execution_id = 2; // optional, if empty returns tenant-wide usage
+}
+
+message GetResourceUsageResponse {
+  ResourceUsage usage = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message ResourceUsage {
+  int64 memory_used_bytes = 1;
+  int32 cpu_used_millicores = 2;
+  int32 active_executions = 3;
+  int32 queued_executions = 4;
+  int64 network_bytes_per_minute = 5;
+  int32 requests_per_minute = 6;
+}
+
+message UpdateRateLimitsRequest {
+  string tenant_id = 1;
+  RateLimits limits = 2;
+}
+
+message RateLimits {
+  int32 max_executions_per_minute = 1;
+  int32 max_concurrent_executions = 2;
+  int32 max_requests_per_minute = 3;
+  int64 max_bandwidth_bytes_per_minute = 4;
+}
+
+message UpdateRateLimitsResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  map<string, string> details = 2;
+}

@@ -1,0 +1,65 @@
+{
+  "rabbit_version": "3.9.0",
+  "rabbitmq_version": "3.9.0",
+  "product_name": "RabbitMQ",
+  "product_version": "3.9.0",
+  "users": [
+    {
+      "name": "n8n_work",
+      "password_hash": "dummy_hash",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator"
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/n8n-work"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "n8n_work",
+      "vhost": "/n8n-work",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [
+    {
+      "name": "cluster_name",
+      "value": "n8n-work@localhost"
+    }
+  ],
+  "policies": [],
+  "queues": [
+    {
+      "name": "workflow_executions",
+      "vhost": "/n8n-work",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "step_executions",
+      "vhost": "/n8n-work",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "n8n-work",
+      "vhost": "/n8n-work",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": []
+}

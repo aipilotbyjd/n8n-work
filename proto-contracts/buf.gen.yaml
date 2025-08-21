@@ -4,14 +4,12 @@ plugins:
   - plugin: buf.build/protocolbuffers/go
     out: ../engine-go/proto
     opt: 
-      - module=github.com/n8n-work/proto-contracts/gen/go
       - paths=source_relative
   
   # Go gRPC code generation
   - plugin: buf.build/grpc/go
     out: ../engine-go/proto
     opt:
-      - module=github.com/n8n-work/proto-contracts/gen/go
       - paths=source_relative
   
   # TypeScript code generation

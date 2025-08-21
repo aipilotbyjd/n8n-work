@@ -75,7 +75,7 @@ export class HealthController {
     ]);
   }
 
-  private async checkRedisConnection() {
+  private checkRedisConnection() {
     try {
       // This would typically use a Redis health indicator
       // For now, we'll simulate a Redis check
@@ -90,7 +90,7 @@ export class HealthController {
     }
   }
 
-  private async checkMessageQueue() {
+  private checkMessageQueue() {
     try {
       // This would typically check RabbitMQ connection
       // For now, we'll simulate a message queue check
@@ -105,7 +105,7 @@ export class HealthController {
     }
   }
 
-  private async checkExternalServices() {
+  private checkExternalServices() {
     try {
       // Check connectivity to critical external services
       const engineUrl = this.configService.get('services.engineGrpcUrl');

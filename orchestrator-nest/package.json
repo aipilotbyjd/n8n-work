@@ -59,14 +59,17 @@
     "reflect-metadata": "^0.1.13",
     "@grpc/grpc-js": "^1.9.14",
     "@grpc/proto-loader": "^0.7.10",
-    "@opentelemetry/api": "^1.7.0",
     "prom-client": "^15.0.0",
     "winston": "^3.11.0",
     "winston-transport": "^4.6.0",
     "@bufbuild/protobuf": "^1.6.0",
     "@connectrpc/connect": "^1.2.0",
     "@connectrpc/connect-node": "^1.2.0",
-    "clickhouse": "^2.6.0"
+    "clickhouse": "^2.6.0",
+    "node-vault": "^0.10.2",
+    "aws-sdk": "^2.1490.0",
+    "cache-manager": "^5.2.4",
+    "@nestjs/cache-manager": "^2.1.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

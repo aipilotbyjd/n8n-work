@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { SecurityService } from '../security/security.service';
+import { PluginPackage } from './entities/plugin-package.entity';
 
 export interface PluginManifest {
   name: string;
@@ -118,26 +119,7 @@ export interface PluginSupport {
   issues?: string;
 }
 
-export interface PluginPackage {
-  id: string;
-  manifest: PluginManifest;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'published' | 'deprecated';
-  signature: string;
-  signatureAlgorithm: string;
-  packageUrl?: string;
-  publisherId: string;
-  publisherVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  approvedAt?: Date;
-  approvedBy?: string;
-  rejectionReason?: string;
-  downloadCount: number;
-  ratings: PluginRating[];
-  averageRating: number;
-  securityScan?: SecurityScanResult;
-  compatibility?: CompatibilityInfo;
-}
+// PluginPackage interface moved to entities/plugin-package.entity.ts
 
 export interface PluginRating {
   userId: string;

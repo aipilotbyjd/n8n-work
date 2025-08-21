@@ -398,3 +398,17 @@ message ListExecutionsResponse {
   string next_page_token = 2;
   int32 total_count = 3;
 }
+
+// Cancel execution request
+message CancelExecutionRequest {
+  string tenant_id = 1;
+  string execution_id = 2;
+  string reason = 3;
+}
+
+// Cancel execution response
+message CancelExecutionResponse {
+  bool success = 1;
+  string message = 2;
+  WorkflowExecution execution = 3;
+}

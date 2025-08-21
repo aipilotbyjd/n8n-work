@@ -101,16 +101,12 @@ export class WorkflowsService {
     });
 
     // Record audit log
-    await this.auditLogService.logWorkflowEvent({
-      action: 'create',
-      workflowId: savedWorkflow.id,
-      tenantId: user.tenantId,
-      userId: user.userId,
-      metadata: {
-        workflowName: savedWorkflow.name,
-        nodeCount: savedWorkflow.nodes.length,
-      },
-    });
+    await this.auditLogService.logWorkflowCreated(
+      savedWorkflow.id,
+      savedWorkflow.name,
+      user.id,
+      savedWorkflow.nodes.length,
+    );
 
     // Update metrics
     this.metricsService.incrementCounter('workflows_created_total', {

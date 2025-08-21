@@ -65,7 +65,8 @@
     "winston-transport": "^4.6.0",
     "@bufbuild/protobuf": "^1.6.0",
     "@connectrpc/connect": "^1.2.0",
-    "@connectrpc/connect-node": "^1.2.0"
+    "@connectrpc/connect-node": "^1.2.0",
+    "clickhouse": "^2.6.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

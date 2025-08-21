@@ -213,7 +213,7 @@ export class SecurityService implements OnModuleInit {
 
       // Fallback to local encryption
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher('aes-256-gcm', this.encryptionKey);
+      const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(this.encryptionKey, 'hex').slice(0, 32), iv);
       cipher.setAAD(Buffer.from('n8n-work-data'));
 
       let encrypted = cipher.update(data, 'utf8', 'hex');
@@ -244,13 +244,13 @@ export class SecurityService implements OnModuleInit {
       }
 
       // Fallback to local decryption
-      const { iv, data, authTag } = JSON.parse(encryptedData);
-      
-      const decipher = crypto.createDecipher('aes-256-gcm', this.encryptionKey);
+      const parsed = JSON.parse(encryptedData);
+      const iv = Buffer.from(parsed.iv, 'hex');
+      const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(this.encryptionKey, 'hex').slice(0, 32), iv);
       decipher.setAAD(Buffer.from('n8n-work-data'));
-      decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+      decipher.setAuthTag(Buffer.from(parsed.authTag, 'hex'));
 
-      let decrypted = decipher.update(data, 'hex', 'utf8');
+      let decrypted = decipher.update(parsed.data, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
 
       return decrypted;

@@ -39,7 +39,13 @@ export async function build(opts: AppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: opts.logger || {
       level: 'info',
-      prettyPrint: process.env.NODE_ENV === 'development'
+      transport: process.env.NODE_ENV === 'development' ? {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname'
+        }
+      } : undefined
     }
   });
 

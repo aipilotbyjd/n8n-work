@@ -4,7 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
-import * as compression from 'compression';
+import compression from 'compression';
 import { AppModule } from './app.module';
 import { initializeOpenTelemetry } from './observability/tracing';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';

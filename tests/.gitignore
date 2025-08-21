@@ -1,0 +1,68 @@
+# Test outputs
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+test-reports/
+
+# Jest
+jest_*
+
+# Node.js dependencies (if tests have their own package.json)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files for testing
+.env.test
+.env.test.local
+
+# Logs
+logs
+*.log
+
+# Temporary test files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Test databases
+*.test.db
+*.test.sqlite
+*.test.sqlite3
+
+# Screenshots and videos from e2e tests
+screenshots/
+videos/
+cypress/screenshots/
+cypress/videos/
+playwright-report/
+test-results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Performance test results
+*.perf
+performance-results/
+
+# Load test results
+load-test-results/
+
+# Benchmark results
+benchmark-results/

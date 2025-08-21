@@ -1,0 +1,94 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+crash.log
+crash.*.log
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+.kube/
+
+# Docker
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# SSL/TLS certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Secrets
+secrets/
+*.secret
+
+# Monitoring data
+prometheus/data/
+grafana/data/
+loki/data/
+tempo/data/
+
+# Database data
+postgres/data/
+clickhouse/data/
+redis/data/
+
+# Message queue data
+rabbitmq/data/
+
+# Vault data
+vault/data/
+vault/logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Helm
+charts/*.tgz
+charts/*/charts/
+charts/*/requirements.lock
+
+# Ansible
+*.retry
+.vault_pass
+
+# Local development overrides
+docker-compose.override.yml
+docker-compose.local.yml

@@ -1,0 +1,78 @@
+# Script outputs
+logs/
+*.log
+output/
+results/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Generated files
+generated/
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Node.js (if scripts use Node.js)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if scripts use Python)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Go (if scripts use Go)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database dumps
+*.sql
+*.dump
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# Local configuration overrides
+config.local.*
+settings.local.*

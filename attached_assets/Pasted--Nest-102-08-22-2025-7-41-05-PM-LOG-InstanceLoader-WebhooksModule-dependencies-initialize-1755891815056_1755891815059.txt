@@ -1,0 +1,67 @@
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] WebhooksModule dependencies initialized +0ms
+
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] CredentialsModule dependencies initialized +1ms
+
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] MarketplaceModule dependencies initialized +0ms
+
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] PoliciesModule dependencies initialized +1ms
+
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] BillingModule dependencies initialized +0ms
+
+[Nest] 102  - 08/22/2025, 7:41:05 PM     LOG [InstanceLoader] ThrottlerModule dependencies initialized +73ms
+
+[Nest] 102  - 08/22/2025, 7:41:06 PM   ERROR [ExceptionHandler] Nest can't resolve dependencies of the CACHE_MANAGER (?). Please make sure that the argument "CACHE_MODULE_OPTIONS" at index [0] is available in the CacheModule context.
+
+
+Potential solutions:
+
+- Is CacheModule a valid NestJS module?
+
+- If "CACHE_MODULE_OPTIONS" is a provider, is it part of the current CacheModule?
+
+- If "CACHE_MODULE_OPTIONS" is exported from a separate @Module, is that module imported within CacheModule?
+
+  @Module({
+
+    imports: [ /* the Module containing "CACHE_MODULE_OPTIONS" */ ]
+
+  })
+
+
+Error: Nest can't resolve dependencies of the CACHE_MANAGER (?). Please make sure that the argument "CACHE_MODULE_OPTIONS" at index [0] is available in the CacheModule context.
+
+
+Potential solutions:
+
+- Is CacheModule a valid NestJS module?
+
+- If "CACHE_MODULE_OPTIONS" is a provider, is it part of the current CacheModule?
+
+- If "CACHE_MODULE_OPTIONS" is exported from a separate @Module, is that module imported within CacheModule?
+
+  @Module({
+
+    imports: [ /* the Module containing "CACHE_MODULE_OPTIONS" */ ]
+
+  })
+
+
+    at Injector.lookupComponentInParentModules (/app/node_modules/@nestjs/core/injector/injector.js:262:19)
+
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+    at async Injector.resolveComponentInstance (/app/node_modules/@nestjs/core/injector/injector.js:215:33)
+
+    at async resolveParam (/app/node_modules/@nestjs/core/injector/injector.js:129:38)
+
+    at async Promise.all (index 0)
+
+    at async Injector.resolveConstructorParams (/app/node_modules/@nestjs/core/injector/injector.js:144:27)
+
+    at async Injector.loadInstance (/app/node_modules/@nestjs/core/injector/injector.js:70:13)
+
+    at async Injector.loadProvider (/app/node_modules/@nestjs/core/injector/injector.js:98:9)
+
+    at async /app/node_modules/@nestjs/core/injector/instance-loader.js:56:13
+
+    at async Promise.all (index 3)

@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -97,6 +98,13 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
     // Health checks
     TerminusModule,
+
+    // Cache configuration
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 300000, // 5 minutes in milliseconds
+      max: 100, // maximum number of items in cache
+    }),
 
     // Core modules
     ObservabilityModule,

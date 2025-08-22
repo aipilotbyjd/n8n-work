@@ -3,54 +3,54 @@ module github.com/n8n-work/engine-go
 go 1.21
 
 require (
-	// gRPC and Protocol Buffers
-	google.golang.org/grpc v1.59.0
-	google.golang.org/protobuf v1.31.0
-	
-	// Database
-	github.com/lib/pq v1.10.9
-	github.com/jmoiron/sqlx v1.3.5
-	
-	// Message Queue
-	github.com/streadway/amqp v1.1.0
-	
+
+	// Validation
+	github.com/go-playground/validator/v10 v10.16.0
+
 	// Redis
 	github.com/go-redis/redis/v8 v8.11.5
-	
+
+	// HTTP client
+	github.com/go-resty/resty/v2 v2.10.0
+
+	// Utilities
+	github.com/google/uuid v1.4.0
+	github.com/jmoiron/sqlx v1.3.5
+
+	// Database
+	github.com/lib/pq v1.10.9
+	github.com/mitchellh/mapstructure v1.5.0
+
+	// Metrics
+	github.com/prometheus/client_golang v1.17.0
+	github.com/spf13/cobra v1.8.0
+
 	// Configuration
 	github.com/spf13/viper v1.17.0
-	github.com/spf13/cobra v1.8.0
-	
-	// Logging
-	go.uber.org/zap v1.26.0
-	
+
+	// Message Queue
+	github.com/streadway/amqp v1.1.0
+
+	// JSON handling
+	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/sjson v1.2.5
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
+
 	// OpenTelemetry
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
-	
-	// Metrics
-	github.com/prometheus/client_golang v1.17.0
-	
-	// Utilities
-	github.com/google/uuid v1.4.0
-	github.com/mitchellh/mapstructure v1.5.0
+
+	// Logging
+	go.uber.org/zap v1.26.0
 	golang.org/x/sync v0.5.0
 	golang.org/x/time v0.5.0
-	
-	// Validation
-	github.com/go-playground/validator/v10 v10.16.0
-	
-	// JSON handling
-	github.com/tidwall/gjson v1.17.0
-	github.com/tidwall/sjson v1.2.5
-	
-	// HTTP client
-	github.com/go-resty/resty/v2 v2.10.0
-	
+	// gRPC and Protocol Buffers
+	google.golang.org/grpc v1.59.0
+	google.golang.org/protobuf v1.31.0
+
 )
 
 require (
@@ -64,7 +64,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect

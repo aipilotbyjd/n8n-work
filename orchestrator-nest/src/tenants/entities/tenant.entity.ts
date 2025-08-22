@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Workflow } from '../../workflows/entities/workflow.entity';
+import { Workflow } from '../../domains/workflows/entities/workflow.entity';
 import { User } from '../../auth/entities/user.entity';
 
 @Entity('tenants')

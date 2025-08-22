@@ -6,7 +6,7 @@ import (
 	"github.com/n8n-work/engine-go/internal/config"
 	"github.com/n8n-work/engine-go/internal/observability"
 	"github.com/n8n-work/engine-go/internal/repo"
-	pb "github.com/n8n-work/engine-go/proto/execution/v1"
+	pb "github.com/n8n-work/engine-go/proto/executionv1"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"

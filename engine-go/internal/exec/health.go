@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/n8n-work/engine-go/internal/repo"
-	pb "github.com/n8n-work/engine-go/proto/health/v1"
+	pb "github.com/n8n-work/engine-go/proto/healthv1"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"

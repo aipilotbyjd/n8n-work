@@ -17,8 +17,8 @@ import (
 	"github.com/n8n-work/engine-go/internal/observability"
 	"github.com/n8n-work/engine-go/internal/repo"
 	"github.com/n8n-work/engine-go/internal/invoker"
-	executionv1 "github.com/n8n-work/engine-go/proto/execution/v1"
-	healthv1 "github.com/n8n-work/engine-go/proto/health/v1"
+	executionv1 "github.com/n8n-work/engine-go/proto/executionv1"
+	healthv1 "github.com/n8n-work/engine-go/proto/healthv1"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"

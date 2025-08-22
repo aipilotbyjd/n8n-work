@@ -12,9 +12,9 @@ export class WorkflowValidationService {
     }
 
     // Validate node connections
-    const connections = workflow.connections || workflow.edges || [];
-    if (connections && connections.length > 0) {
-      for (const connection of connections) {
+    const workflowConnections = (workflow as any).connections || (workflow as any).edges || [];
+    if (workflowConnections && workflowConnections.length > 0) {
+      for (const connection of workflowConnections) {
         const sourceNodeId = connection.sourceNodeId || connection.fromNode;
         const targetNodeId = connection.targetNodeId || connection.toNode;
         
@@ -31,8 +31,8 @@ export class WorkflowValidationService {
     }
 
     // Check for circular dependencies
-    const connections = workflow.connections || workflow.edges || [];
-    if (this.hasCircularDependency(workflow.nodes, connections)) {
+    const connectionsList = (workflow as any).connections || (workflow as any).edges || [];
+    if (this.hasCircularDependency(workflow.nodes, connectionsList)) {
       errors.push('Workflow contains circular dependencies');
     }
 

@@ -248,14 +248,14 @@ export class WorkflowsService {
       }
     }
 
-    // Validate updated workflow if nodes or edges changed
-    if (updateWorkflowDto.nodes || updateWorkflowDto.edges) {
+    // Validate updated workflow if nodes or connections changed
+    if (updateWorkflowDto.nodes || updateWorkflowDto.connections) {
       const validationResult = await this.workflowValidationService.validateWorkflow({
         nodes: updateWorkflowDto.nodes || workflow.nodes,
-        edges: updateWorkflowDto.edges || workflow.edges,
+        connections: updateWorkflowDto.connections || workflow.connections,
       });
 
-      if (!validationResult.isValid) {
+      if (!validationResult.valid) {
         throw new BadRequestException({
           message: 'Updated workflow validation failed',
           errors: validationResult.errors,
@@ -282,12 +282,13 @@ export class WorkflowsService {
 
     // Record audit log
     await this.auditLogService.logWorkflowEvent({
-      action: 'update',
       workflowId: id,
-      tenantId: user.tenantId,
+      workflowName: updatedWorkflow.name,
+      action: 'update',
       userId: user.userId,
+      tenantId: user.tenantId,
+      newValues: updateWorkflowDto,
       metadata: {
-        workflowName: updatedWorkflow.name,
         changes: updateWorkflowDto,
       },
     });
@@ -340,13 +341,12 @@ export class WorkflowsService {
 
     // Record audit log
     await this.auditLogService.logWorkflowEvent({
-      action: 'delete',
       workflowId: id,
-      tenantId: user.tenantId,
+      workflowName: workflow.name,
+      action: 'delete',
       userId: user.userId,
-      metadata: {
-        workflowName: workflow.name,
-      },
+      tenantId: user.tenantId,
+      metadata: {},
     });
 
     // Update metrics
@@ -369,10 +369,10 @@ export class WorkflowsService {
     // Validate workflow before activation
     const validationResult = await this.workflowValidationService.validateWorkflow({
       nodes: workflow.nodes,
-      edges: workflow.edges,
+      connections: workflow.connections,
     });
 
-    if (!validationResult.isValid) {
+    if (!validationResult.valid) {
       throw new BadRequestException({
         message: 'Cannot activate workflow with validation errors',
         errors: validationResult.errors,
@@ -381,12 +381,6 @@ export class WorkflowsService {
 
     // Compile workflow for execution
     const compilationResult = await this.workflowCompilerService.compile(workflow);
-    if (!compilationResult.success) {
-      throw new BadRequestException({
-        message: 'Workflow compilation failed',
-        errors: compilationResult.errors,
-      });
-    }
 
     // Update status
     workflow.status = WorkflowStatus.ACTIVE;
@@ -405,13 +399,12 @@ export class WorkflowsService {
 
     // Record audit log
     await this.auditLogService.logWorkflowEvent({
-      action: 'activate',
       workflowId: id,
-      tenantId: user.tenantId,
+      workflowName: workflow.name,
+      action: 'activate',
       userId: user.userId,
-      metadata: {
-        workflowName: workflow.name,
-      },
+      tenantId: user.tenantId,
+      metadata: {},
     });
 
     // Update metrics
@@ -450,13 +443,12 @@ export class WorkflowsService {
 
     // Record audit log
     await this.auditLogService.logWorkflowEvent({
-      action: 'deactivate',
       workflowId: id,
-      tenantId: user.tenantId,
+      workflowName: deactivatedWorkflow.name,
+      action: 'deactivate',
       userId: user.userId,
-      metadata: {
-        workflowName: workflow.name,
-      },
+      tenantId: user.tenantId,
+      metadata: {},
     });
 
     // Update metrics

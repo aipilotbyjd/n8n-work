@@ -67,6 +67,10 @@ export class CreateWorkflowDto {
 
   @IsOptional()
   @IsArray()
+  edges?: any[]; // Legacy support for edges
+
+  @IsOptional()
+  @IsArray()
   tags?: string[];
 
   @IsOptional()

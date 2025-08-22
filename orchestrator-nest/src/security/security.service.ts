@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Vault from 'node-vault';
 import * as AWS from 'aws-sdk';
@@ -6,7 +6,26 @@ import * as crypto from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
+import * as bcrypt from 'bcrypt';
+import { Request } from 'express';
+
+export interface SecurityContext {
+  userId: string;
+  tenantId: string;
+  roles: string[];
+  permissions: string[];
+  isAuthenticated: boolean;
+}
+
+export interface JwtPayload {
+  sub: string;
+  tenantId: string;
+  roles: string[];
+  permissions: string[];
+  iat: number;
+  exp: number;
+}
 
 @Injectable()
 export class SecurityService implements OnModuleInit {
@@ -449,39 +468,6 @@ export class SecurityService implements OnModuleInit {
     }
   }
 
-  async onModuleDestroy() {
-    if (this.keyRotationInterval) {
-      clearInterval(this.keyRotationInterval);
-    }
-  }
-}
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as jwt from 'jsonwebtoken';
-import * as bcrypt from 'bcrypt';
-import { Request } from 'express';
-
-export interface SecurityContext {
-  userId: string;
-  tenantId: string;
-  roles: string[];
-  permissions: string[];
-  isAuthenticated: boolean;
-}
-
-export interface JwtPayload {
-  sub: string;
-  tenantId: string;
-  roles: string[];
-  permissions: string[];
-  iat: number;
-  exp: number;
-}
-
-@Injectable()
-export class SecurityService {
-  constructor(private readonly configService: ConfigService) {}
-
   async validateApiKey(apiKey: string): Promise<SecurityContext> {
     // Implement API key validation logic
     if (!apiKey) {
@@ -504,7 +490,7 @@ export class SecurityService {
 
   async validateJwtToken(token: string): Promise<SecurityContext> {
     try {
-      const secret = this.configService.get<string>('JWT_SECRET');
+      const secret = this.config.get<string>('JWT_SECRET');
       const payload = jwt.verify(token, secret) as JwtPayload;
 
       return {
@@ -520,17 +506,17 @@ export class SecurityService {
   }
 
   async generateJwtToken(userId: string, tenantId: string, roles: string[], permissions: string[]): Promise<string> {
-    const secret = this.configService.get<string>('JWT_SECRET');
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h');
+    const secret = this.config.get<string>('JWT_SECRET') || 'default-secret-key-for-development';
+    const expiresIn = this.config.get<string>('JWT_EXPIRES_IN') || '24h';
 
-    const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
+    const payload = {
       sub: userId,
       tenantId,
       roles,
       permissions,
     };
 
-    return jwt.sign(payload, secret, { expiresIn });
+    return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
   }
 
   async hashPassword(password: string): Promise<string> {
@@ -583,6 +569,12 @@ export class SecurityService {
 
     if (context.tenantId !== resourceTenantId && !context.roles.includes('super-admin')) {
       throw new ForbiddenException('Access denied to this tenant resource');
+    }
+  }
+
+  async onModuleDestroy() {
+    if (this.keyRotationInterval) {
+      clearInterval(this.keyRotationInterval);
     }
   }
 }

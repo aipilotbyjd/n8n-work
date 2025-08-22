@@ -33,6 +33,8 @@ export class PaginationHelper {
     limit: number,
   ): PaginatedResult<T> {
     const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrevious = page > 1;
     
     return {
       items,
@@ -40,8 +42,9 @@ export class PaginationHelper {
       page,
       limit,
       totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
+      hasNext,
+      hasPrev: hasPrevious,
+      hasPrevious,
     };
   }
 

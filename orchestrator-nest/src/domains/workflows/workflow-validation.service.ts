@@ -3,7 +3,7 @@ import { CreateWorkflowDto } from './dto/create-workflow.dto';
 
 @Injectable()
 export class WorkflowValidationService {
-  validateWorkflow(workflow: CreateWorkflowDto): { valid: boolean; errors: string[] } {
+  validateWorkflow(workflow: CreateWorkflowDto | { nodes: any[]; connections?: any[]; edges?: any[] }): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Basic validation
@@ -12,22 +12,27 @@ export class WorkflowValidationService {
     }
 
     // Validate node connections
-    if (workflow.connections) {
-      for (const connection of workflow.connections) {
-        const sourceExists = workflow.nodes.some(node => node.id === connection.sourceNodeId);
-        const targetExists = workflow.nodes.some(node => node.id === connection.targetNodeId);
+    const connections = workflow.connections || workflow.edges || [];
+    if (connections && connections.length > 0) {
+      for (const connection of connections) {
+        const sourceNodeId = connection.sourceNodeId || connection.fromNode;
+        const targetNodeId = connection.targetNodeId || connection.toNode;
+        
+        const sourceExists = workflow.nodes.some(node => node.id === sourceNodeId);
+        const targetExists = workflow.nodes.some(node => node.id === targetNodeId);
 
         if (!sourceExists) {
-          errors.push(`Source node ${connection.sourceNodeId} not found`);
+          errors.push(`Source node ${sourceNodeId} not found`);
         }
         if (!targetExists) {
-          errors.push(`Target node ${connection.targetNodeId} not found`);
+          errors.push(`Target node ${targetNodeId} not found`);
         }
       }
     }
 
     // Check for circular dependencies
-    if (this.hasCircularDependency(workflow.nodes, workflow.connections)) {
+    const connections = workflow.connections || workflow.edges || [];
+    if (this.hasCircularDependency(workflow.nodes, connections)) {
       errors.push('Workflow contains circular dependencies');
     }
 
@@ -47,9 +52,14 @@ export class WorkflowValidationService {
     }
     
     for (const connection of connections) {
-      const targets = graph.get(connection.sourceNodeId) || [];
-      targets.push(connection.targetNodeId);
-      graph.set(connection.sourceNodeId, targets);
+      const sourceId = connection.sourceNodeId || connection.fromNode;
+      const targetId = connection.targetNodeId || connection.toNode;
+      
+      if (sourceId && targetId) {
+        const targets = graph.get(sourceId) || [];
+        targets.push(targetId);
+        graph.set(sourceId, targets);
+      }
     }
 
     const visited = new Set<string>();

@@ -177,6 +177,7 @@ export class WorkflowsService {
       limit,
       totalPages: Math.ceil(total / limit),
       hasNext: page < Math.ceil(total / limit),
+      hasPrev: page > 1,
       hasPrevious: page > 1,
     };
 

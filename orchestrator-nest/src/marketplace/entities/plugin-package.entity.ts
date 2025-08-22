@@ -80,6 +80,9 @@ export class PluginPackage {
   @Column('jsonb', { nullable: true })
   metadata: Record<string, any>;
 
+  @Column('jsonb', { nullable: true })
+  securityScan: Record<string, any>;
+
   @CreateDateColumn()
   createdAt: Date;
 

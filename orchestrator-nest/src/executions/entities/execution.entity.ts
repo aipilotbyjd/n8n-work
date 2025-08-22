@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Workflow } from '../../workflows/entities/workflow.entity';
+import { Workflow } from '../../domains/workflows/entities/workflow.entity';
 
 export enum ExecutionStatus {
   PENDING = 'pending',

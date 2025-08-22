@@ -17,6 +17,11 @@ export class ListWorkflowsDto {
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
+  limit?: number = 20;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   pageSize?: number = 20;
 
   @IsOptional()
@@ -30,6 +35,14 @@ export class ListWorkflowsDto {
   @IsOptional()
   @IsEnum(WorkflowStatus)
   status?: WorkflowStatus;
+
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'updatedAt';
+
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 
   @IsOptional()
   @IsString()

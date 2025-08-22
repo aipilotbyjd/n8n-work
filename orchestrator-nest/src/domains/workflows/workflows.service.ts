@@ -22,7 +22,7 @@ import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { TenantService } from '../tenants/tenants.service';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { WorkflowCompilerService } from './workflow-compiler.service';
-import { MetricsService } from '../observability/metrics.service';
+import { MetricsService } from '../../observability/metrics.service';
 import { AuditLogService } from '../audit/audit-log.service';
 
 @Injectable()
@@ -70,10 +70,10 @@ export class WorkflowsService {
     // Validate workflow definition
     const validationResult = await this.workflowValidationService.validateWorkflow({
       nodes: createWorkflowDto.nodes,
-      edges: createWorkflowDto.edges,
+      connections: createWorkflowDto.connections,
     });
 
-    if (!validationResult.isValid) {
+    if (!validationResult.valid) {
       throw new BadRequestException({
         message: 'Workflow validation failed',
         errors: validationResult.errors,

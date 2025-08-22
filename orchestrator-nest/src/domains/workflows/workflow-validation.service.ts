@@ -85,4 +85,37 @@ export class WorkflowValidationService {
 
     return false;
   }
+
+  async hasBreakingChanges(
+    oldWorkflow: any,
+    newWorkflow: any,
+  ): Promise<boolean> {
+    // Compare workflow structures to detect breaking changes
+    const oldNodeIds = new Set(oldWorkflow.nodes?.map((n: any) => n.id) || []);
+    const newNodeIds = new Set(newWorkflow.nodes?.map((n: any) => n.id) || []);
+
+    // Check if any nodes were removed
+    for (const nodeId of oldNodeIds) {
+      if (!newNodeIds.has(nodeId)) {
+        return true; // Node removal is a breaking change
+      }
+    }
+
+    // Check if any node types changed
+    const oldNodeTypes = new Map(
+      oldWorkflow.nodes?.map((n: any) => [n.id, n.type]) || [],
+    );
+    const newNodeTypes = new Map(
+      newWorkflow.nodes?.map((n: any) => [n.id, n.type]) || [],
+    );
+
+    for (const [nodeId, oldType] of oldNodeTypes) {
+      const newType = newNodeTypes.get(nodeId);
+      if (newType && newType !== oldType) {
+        return true; // Node type change is a breaking change
+      }
+    }
+
+    return false;
+  }
 }

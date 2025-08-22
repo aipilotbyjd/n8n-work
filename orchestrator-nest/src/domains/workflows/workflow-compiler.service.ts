@@ -28,4 +28,18 @@ export class WorkflowCompilerService {
       errors
     };
   }
+
+  async compile(workflow: any): Promise<any> {
+    // Compile workflow to execution format
+    const compiled = this.compileWorkflow(workflow);
+    
+    // Validate the compiled result
+    const validation = this.validateCompiledWorkflow(compiled);
+    
+    if (!validation.valid) {
+      throw new Error(`Compilation failed: ${validation.errors.join(', ')}`);
+    }
+    
+    return compiled;
+  }
 }

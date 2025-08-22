@@ -5,6 +5,8 @@ import {
   TypeOrmHealthIndicator,
   MemoryHealthIndicator,
   DiskHealthIndicator,
+  HealthIndicatorResult,
+  HealthIndicatorStatus,
 } from '@nestjs/terminus';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -75,13 +77,13 @@ export class HealthController {
     ]);
   }
 
-  private checkRedisConnection() {
+  private checkRedisConnection(): HealthIndicatorResult {
     try {
       // This would typically use a Redis health indicator
       // For now, we'll simulate a Redis check
       return {
         redis: {
-          status: 'up',
+          status: 'up' as HealthIndicatorStatus,
           message: 'Redis connection is healthy',
         },
       };
@@ -90,13 +92,13 @@ export class HealthController {
     }
   }
 
-  private checkMessageQueue() {
+  private checkMessageQueue(): HealthIndicatorResult {
     try {
       // This would typically check RabbitMQ connection
       // For now, we'll simulate a message queue check
       return {
         messageQueue: {
-          status: 'up',
+          status: 'up' as HealthIndicatorStatus,
           message: 'Message queue connection is healthy',
         },
       };
@@ -105,7 +107,7 @@ export class HealthController {
     }
   }
 
-  private checkExternalServices() {
+  private checkExternalServices(): HealthIndicatorResult {
     try {
       // Check connectivity to critical external services
       const engineUrl = this.configService.get('services.engineGrpcUrl');
@@ -113,7 +115,7 @@ export class HealthController {
 
       return {
         externalServices: {
-          status: 'up',
+          status: 'up' as HealthIndicatorStatus,
           services: {
             engine: { url: engineUrl, status: 'up' },
             nodeRunner: { url: nodeRunnerUrl, status: 'up' },

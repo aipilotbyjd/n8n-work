@@ -12,7 +12,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { Tenant } from '../../../tenants/entities/tenant.entity';
 import { User } from '../../../auth/entities/user.entity';
-import { Execution } from '../../executions/entities/execution.entity';
+import { Execution } from '../../../executions/entities/execution.entity';
 
 export enum WorkflowStatus {
   DRAFT = 'draft',
@@ -107,6 +107,20 @@ export class Workflow {
   })
   @Column({ type: 'jsonb' })
   edges: WorkflowEdge[];
+
+  @ApiProperty({
+    description: 'Workflow node connections',
+    type: 'object',
+  })
+  @Column({ type: 'jsonb', default: {} })
+  connections: Record<string, any>;
+
+  @ApiProperty({
+    description: 'Workflow settings and configuration',
+    type: 'object',
+  })
+  @Column({ type: 'jsonb', default: {} })
+  settings: Record<string, any>;
 
   @ApiProperty({
     description: 'Workflow metadata and labels',

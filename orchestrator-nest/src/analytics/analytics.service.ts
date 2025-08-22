@@ -611,7 +611,7 @@ export class AnalyticsService {
   private async insertData(query: string, data: any[]): Promise<void> {
     try {
       const stream = this.clickhouse.query(query);
-      await stream.stream(data);
+      await stream.stream();
     } catch (error) {
       this.logger.error(`Failed to insert data: ${error.message}`);
       throw error;

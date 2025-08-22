@@ -1,0 +1,10 @@
+modules = ["nodejs-20", "go-1.21"]
+compile = "make"
+run = "dev"
+
+[nix]
+channel = "stable-25_05"
+
+[deployment]
+build = ["sh", "-c", "make"]
+run = ["sh", "-c", "dev"]

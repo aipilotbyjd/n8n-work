@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as Vault from 'node-vault';
+import Vault from 'node-vault';
 import * as AWS from 'aws-sdk';
 import * as crypto from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -126,7 +126,7 @@ export class SecurityService implements OnModuleInit {
     let rules = '';
     for (const [path, permissions] of Object.entries(policy.path)) {
       rules += `path "${path}" {\n`;
-      rules += `  capabilities = ${JSON.stringify(permissions.capabilities)}\n`;
+      rules += `  capabilities = ${JSON.stringify((permissions as any).capabilities)}\n`;
       rules += `}\n\n`;
     }
     return rules;

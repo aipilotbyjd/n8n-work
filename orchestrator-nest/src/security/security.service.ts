@@ -455,3 +455,134 @@ export class SecurityService implements OnModuleInit {
     }
   }
 }
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as jwt from 'jsonwebtoken';
+import * as bcrypt from 'bcrypt';
+import { Request } from 'express';
+
+export interface SecurityContext {
+  userId: string;
+  tenantId: string;
+  roles: string[];
+  permissions: string[];
+  isAuthenticated: boolean;
+}
+
+export interface JwtPayload {
+  sub: string;
+  tenantId: string;
+  roles: string[];
+  permissions: string[];
+  iat: number;
+  exp: number;
+}
+
+@Injectable()
+export class SecurityService {
+  constructor(private readonly configService: ConfigService) {}
+
+  async validateApiKey(apiKey: string): Promise<SecurityContext> {
+    // Implement API key validation logic
+    if (!apiKey) {
+      throw new UnauthorizedException('API key is required');
+    }
+
+    // Mock validation - replace with actual implementation
+    if (apiKey.startsWith('nw_')) {
+      return {
+        userId: 'user-from-api-key',
+        tenantId: 'tenant-from-api-key',
+        roles: ['user'],
+        permissions: ['read', 'write'],
+        isAuthenticated: true,
+      };
+    }
+
+    throw new UnauthorizedException('Invalid API key');
+  }
+
+  async validateJwtToken(token: string): Promise<SecurityContext> {
+    try {
+      const secret = this.configService.get<string>('JWT_SECRET');
+      const payload = jwt.verify(token, secret) as JwtPayload;
+
+      return {
+        userId: payload.sub,
+        tenantId: payload.tenantId,
+        roles: payload.roles,
+        permissions: payload.permissions,
+        isAuthenticated: true,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async generateJwtToken(userId: string, tenantId: string, roles: string[], permissions: string[]): Promise<string> {
+    const secret = this.configService.get<string>('JWT_SECRET');
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h');
+
+    const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
+      sub: userId,
+      tenantId,
+      roles,
+      permissions,
+    };
+
+    return jwt.sign(payload, secret, { expiresIn });
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  extractTokenFromRequest(request: Request): string | null {
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+
+    const apiKey = request.headers['x-api-key'] as string;
+    if (apiKey) {
+      return apiKey;
+    }
+
+    return null;
+  }
+
+  checkPermission(context: SecurityContext, requiredPermission: string): void {
+    if (!context.isAuthenticated) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    if (!context.permissions.includes(requiredPermission) && !context.permissions.includes('admin')) {
+      throw new ForbiddenException(`Permission '${requiredPermission}' required`);
+    }
+  }
+
+  checkRole(context: SecurityContext, requiredRole: string): void {
+    if (!context.isAuthenticated) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    if (!context.roles.includes(requiredRole) && !context.roles.includes('admin')) {
+      throw new ForbiddenException(`Role '${requiredRole}' required`);
+    }
+  }
+
+  validateTenantAccess(context: SecurityContext, resourceTenantId: string): void {
+    if (!context.isAuthenticated) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    if (context.tenantId !== resourceTenantId && !context.roles.includes('super-admin')) {
+      throw new ForbiddenException('Access denied to this tenant resource');
+    }
+  }
+}

@@ -1,3 +1,4 @@
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -27,8 +28,20 @@ import { PoliciesModule } from './domains/policies/policies.module';
 import { BillingModule } from './domains/billing/billing.module';
 import { AuditModule } from './domains/audit/audit.module';
 
+// Security
+import { SecurityService } from './security/security.service';
+
 // Health check
 import { HealthController } from './health.controller';
+
+// Global filters and interceptors
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+
+// Core providers
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -102,6 +115,29 @@ import { HealthController } from './health.controller';
     AuditModule,
   ],
   controllers: [HealthController],
-  providers: [],
+  providers: [
+    // Global exception filter
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    // Global interceptors
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+    // Global guards
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // Core services
+    SecurityService,
+  ],
+  exports: [SecurityService],
 })
 export class AppModule {}

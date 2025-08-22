@@ -1,3 +1,4 @@
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -5,8 +6,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TerminusModule } from '@nestjs/terminus';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
 
 // Configuration
 import { configuration } from './config/configuration';
@@ -98,17 +97,6 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
     // Health checks
     TerminusModule,
-
-    // Cache
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: () => ({
-        store: redisStore,
-        host: process.env.REDIS_HOST || 'redis',
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        ttl: 300, // 5 minutes default TTL
-      }),
-    }),
 
     // Core modules
     ObservabilityModule,

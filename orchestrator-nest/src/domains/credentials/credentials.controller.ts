@@ -2,390 +2,264 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
   Body,
+  Patch,
   Param,
+  Delete,
+  UseGuards,
   Query,
   HttpCode,
   HttpStatus,
-  ParseUUIDPipe,
-  UseGuards,
-  NotFoundException,
-  ForbiddenException,
+  ParseBoolPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBearerAuth,
-  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
-
-// DTOs for credential operations
-class CreateCredentialDto {
-  name: string;
-  type: string;
-  description?: string;
-  data: Record<string, any>;
-  metadata?: Record<string, any>;
-  tags?: string[];
-}
-
-class UpdateCredentialDto {
-  name?: string;
-  description?: string;
-  data?: Record<string, any>;
-  metadata?: Record<string, any>;
-  tags?: string[];
-}
-
-class Credential {
-  id: string;
-  tenantId: string;
-  name: string;
-  type: string;
-  description: string;
-  tags: string[];
-  metadata: Record<string, any>;
-  isActive: boolean;
-  lastUsed: Date;
-  usageCount: number;
-  createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-  // Note: sensitive data is not exposed in the response
-}
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Tenant } from '../../common/decorators/tenant.decorator';
+import { CredentialsService } from './credentials.service';
+import { CreateCredentialDto } from './dto/create-credential.dto';
+import { UpdateCredentialDto } from './dto/update-credential.dto';
+import { CredentialResponseDto, CredentialTypeResponseDto } from './dto/credential-response.dto';
+import { OAuthCallbackDto, StartOAuthDto, OAuthUrlResponseDto } from './dto/oauth-callback.dto';
 
 @ApiTags('Credentials')
-@Controller({ path: 'credentials', version: '1' })
+@Controller('credentials')
+@UseGuards(JwtAuthGuard, TenantGuard)
 @ApiBearerAuth('JWT-auth')
 export class CredentialsController {
-  constructor(
-    // Note: CredentialsService would need to be created
-    // private readonly credentialsService: CredentialsService,
-  ) {}
+  constructor(private readonly credentialsService: CredentialsService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create credential',
-    description: 'Creates a new credential with encrypted storage',
+    summary: 'Create a new credential',
+    description: 'Creates a new credential with encrypted storage of sensitive data.',
   })
-  @ApiBody({
-    type: CreateCredentialDto,
-    description: 'Credential configuration',
-    examples: {
-      'api-key': {
-        summary: 'API Key credential',
-        value: {
-          name: 'Slack API Key',
-          type: 'api_key',
-          description: 'API key for Slack integration',
-          data: {
-            apiKey: 'xoxb-your-token-here',
-            baseUrl: 'https://slack.com/api/',
-          },
-          tags: ['slack', 'messaging'],
-          metadata: {
-            environment: 'production',
-            owner: 'team-integrations',
-          },
-        },
-      },
-      'oauth2': {
-        summary: 'OAuth2 credential',
-        value: {
-          name: 'Google OAuth2',
-          type: 'oauth2',
-          description: 'OAuth2 credentials for Google services',
-          data: {
-            clientId: 'your-client-id',
-            clientSecret: 'your-client-secret',
-            redirectUri: 'https://app.example.com/oauth/callback',
-            scope: 'https://www.googleapis.com/auth/drive',
-          },
-          tags: ['google', 'oauth2'],
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
+  @ApiCreatedResponse({
     description: 'Credential created successfully',
-    type: Credential,
+    type: CredentialResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid credential configuration',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Credential with this name already exists',
-  })
-  async createCredential(@Body() createCredentialDto: CreateCredentialDto): Promise<Credential> {
-    throw new Error('Implementation pending');
+  @ApiBadRequestResponse({ description: 'Invalid credential data or validation failed' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  @ApiForbiddenResponse({ description: 'Insufficient permissions' })
+  async create(
+    @Body() createCredentialDto: CreateCredentialDto,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<CredentialResponseDto> {
+    return this.credentialsService.create(createCredentialDto, tenantId, user.id);
   }
 
   @Get()
   @ApiOperation({
-    summary: 'List credentials',
-    description: 'Retrieves a list of credentials for the current tenant (without sensitive data)',
+    summary: 'Get all credentials for the tenant',
+    description: 'Retrieves all credentials belonging to the current tenant.',
   })
   @ApiQuery({
-    name: 'type',
+    name: 'includeData',
     required: false,
-    type: String,
-    description: 'Filter by credential type',
-    example: 'api_key',
+    type: Boolean,
+    description: 'Include decrypted credential data in response (requires admin permissions)',
+    example: false,
   })
-  @ApiQuery({
-    name: 'tags',
-    required: false,
-    type: String,
-    description: 'Filter by tags (comma-separated)',
-    example: 'slack,messaging',
+  @ApiOkResponse({
+    description: 'List of credentials',
+    type: [CredentialResponseDto],
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    type: String,
-    description: 'Search by name or description',
-    example: 'slack',
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async findAll(
+    @Tenant() tenantId: string,
+    @Query('includeData', new DefaultValuePipe(false), ParseBoolPipe)
+    includeData: boolean = false,
+  ): Promise<CredentialResponseDto[]> {
+    return this.credentialsService.findAll(tenantId, includeData);
+  }
+
+  @Get('types')
+  @ApiOperation({
+    summary: 'Get available credential types',
+    description: 'Retrieves all available credential types that can be used to create credentials.',
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'List of credentials retrieved successfully',
-    type: [Credential],
+  @ApiOkResponse({
+    description: 'List of available credential types',
+    type: [CredentialTypeResponseDto],
   })
-  async listCredentials(
-    @Query('type') type?: string,
-    @Query('tags') tags?: string,
-    @Query('search') search?: string,
-  ): Promise<Credential[]> {
-    throw new Error('Implementation pending');
+  async getCredentialTypes() {
+    return this.credentialsService.getCredentialTypes();
   }
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Get credential details',
-    description: 'Retrieves details of a specific credential (without sensitive data)',
+    summary: 'Get a credential by ID',
+    description: 'Retrieves a specific credential by its ID.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Credential UUID',
+  @ApiParam({ name: 'id', description: 'Credential UUID', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiQuery({
+    name: 'includeData',
+    required: false,
+    type: Boolean,
+    description: 'Include decrypted credential data in response',
+    example: false,
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Credential details retrieved successfully',
-    type: Credential,
+  @ApiOkResponse({
+    description: 'Credential details',
+    type: CredentialResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Credential not found',
-  })
-  async getCredential(@Param('id', ParseUUIDPipe) id: string): Promise<Credential> {
-    throw new Error('Implementation pending');
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async findOne(
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+    @Query('includeData', new DefaultValuePipe(false), ParseBoolPipe)
+    includeData: boolean = false,
+  ): Promise<CredentialResponseDto> {
+    return this.credentialsService.findOne(id, tenantId, includeData);
   }
 
-  @Put(':id')
+  @Patch(':id')
   @ApiOperation({
-    summary: 'Update credential',
-    description: 'Updates an existing credential',
+    summary: 'Update a credential',
+    description: 'Updates an existing credential. Only provided fields will be updated.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Credential UUID',
-  })
-  @ApiBody({
-    type: UpdateCredentialDto,
-    description: 'Updated credential data',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
+  @ApiParam({ name: 'id', description: 'Credential UUID' })
+  @ApiOkResponse({
     description: 'Credential updated successfully',
-    type: Credential,
+    type: CredentialResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Credential not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Insufficient permissions to update credential',
-  })
-  async updateCredential(
-    @Param('id', ParseUUIDPipe) id: string,
+  @ApiBadRequestResponse({ description: 'Invalid update data or validation failed' })
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async update(
+    @Param('id') id: string,
     @Body() updateCredentialDto: UpdateCredentialDto,
-  ): Promise<Credential> {
-    throw new Error('Implementation pending');
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<CredentialResponseDto> {
+    return this.credentialsService.update(id, updateCredentialDto, tenantId, user.id);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Delete credential',
-    description: 'Permanently deletes a credential',
+    summary: 'Delete a credential',
+    description: 'Permanently deletes a credential and all associated data.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Credential UUID',
-  })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
-    description: 'Credential deleted successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Credential not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Cannot delete credential in use by workflows',
-  })
-  async deleteCredential(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    throw new Error('Implementation pending');
+  @ApiParam({ name: 'id', description: 'Credential UUID' })
+  @ApiNoContentResponse({ description: 'Credential deleted successfully' })
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<void> {
+    return this.credentialsService.remove(id, tenantId, user.id);
   }
 
   @Post(':id/test')
   @ApiOperation({
-    summary: 'Test credential',
-    description: 'Tests if a credential is valid and working',
+    summary: 'Test a credential connection',
+    description: 'Tests whether the credential can successfully authenticate with its target service.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Credential UUID',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Credential test completed',
+  @ApiParam({ name: 'id', description: 'Credential UUID' })
+  @ApiOkResponse({
+    description: 'Credential test result',
     schema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        details: { type: 'object' },
-        testedAt: { type: 'string', format: 'date-time' },
+        success: { type: 'boolean', description: 'Whether the test was successful' },
+        message: { type: 'string', description: 'Test result message' },
       },
+      required: ['success'],
     },
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Credential not found',
-  })
-  async testCredential(@Param('id', ParseUUIDPipe) id: string): Promise<{
-    success: boolean;
-    message: string;
-    details: Record<string, any>;
-    testedAt: string;
-  }> {
-    throw new Error('Implementation pending');
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async testCredential(
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    return this.credentialsService.test(id, tenantId);
   }
 
-  @Get(':id/usage')
+  @Post(':id/oauth/start')
   @ApiOperation({
-    summary: 'Get credential usage',
-    description: 'Retrieves usage statistics and workflows using this credential',
+    summary: 'Start OAuth flow for a credential',
+    description: 'Initiates an OAuth 2.0 authorization flow for the specified credential.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Credential UUID',
+  @ApiParam({ name: 'id', description: 'Credential UUID' })
+  @ApiOkResponse({
+    description: 'OAuth authorization URL and state',
+    type: OAuthUrlResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Credential usage retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        credentialId: { type: 'string' },
-        usageCount: { type: 'number' },
-        lastUsed: { type: 'string', format: 'date-time' },
-        usedByWorkflows: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              workflowId: { type: 'string' },
-              workflowName: { type: 'string' },
-              nodeIds: { type: 'array', items: { type: 'string' } },
-              lastUsed: { type: 'string', format: 'date-time' },
-            },
-          },
-        },
-        usageHistory: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              date: { type: 'string', format: 'date' },
-              count: { type: 'number' },
-            },
-          },
-        },
-      },
-    },
-  })
-  async getCredentialUsage(@Param('id', ParseUUIDPipe) id: string): Promise<{
-    credentialId: string;
-    usageCount: number;
-    lastUsed: string;
-    usedByWorkflows: Array<{
-      workflowId: string;
-      workflowName: string;
-      nodeIds: string[];
-      lastUsed: string;
-    }>;
-    usageHistory: Array<{
-      date: string;
-      count: number;
-    }>;
-  }> {
-    throw new Error('Implementation pending');
+  @ApiBadRequestResponse({ description: 'Credential does not support OAuth or invalid request' })
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async startOAuth(
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+    @Body() body: { redirectUrl?: string },
+  ): Promise<OAuthUrlResponseDto> {
+    return this.credentialsService.startOAuthFlow(id, tenantId, body.redirectUrl);
   }
 
-  @Get('types/available')
+  @Post('oauth/callback')
   @ApiOperation({
-    summary: 'Get available credential types',
-    description: 'Retrieves a list of available credential types and their schemas',
+    summary: 'Complete OAuth flow',
+    description: 'Completes the OAuth 2.0 flow by exchanging the authorization code for access tokens.',
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Available credential types retrieved successfully',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          type: { type: 'string', example: 'api_key' },
-          name: { type: 'string', example: 'API Key' },
-          description: { type: 'string', example: 'Simple API key authentication' },
-          schema: {
-            type: 'object',
-            description: 'JSON schema for the credential data',
-          },
-          examples: {
-            type: 'array',
-            items: { type: 'object' },
-            description: 'Example credential configurations',
-          },
-        },
-      },
-    },
+  @ApiOkResponse({
+    description: 'OAuth flow completed successfully',
+    type: CredentialResponseDto,
   })
-  async getAvailableCredentialTypes(): Promise<Array<{
-    type: string;
-    name: string;
-    description: string;
-    schema: Record<string, any>;
-    examples: Record<string, any>[];
-  }>> {
-    throw new Error('Implementation pending');
+  @ApiBadRequestResponse({ description: 'Invalid OAuth callback data or expired state' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async oauthCallback(
+    @Body() oauthCallbackDto: OAuthCallbackDto,
+    @Tenant() tenantId: string,
+  ): Promise<CredentialResponseDto> {
+    if (oauthCallbackDto.error) {
+      throw new Error(`OAuth error: ${oauthCallbackDto.error_description || oauthCallbackDto.error}`);
+    }
+    return this.credentialsService.completeOAuthFlow(
+      oauthCallbackDto.state,
+      oauthCallbackDto.code,
+      tenantId,
+    );
+  }
+
+  @Post(':id/oauth/refresh')
+  @ApiOperation({
+    summary: 'Refresh OAuth token',
+    description: 'Refreshes the OAuth access token using the stored refresh token.',
+  })
+  @ApiParam({ name: 'id', description: 'Credential UUID' })
+  @ApiOkResponse({
+    description: 'OAuth token refreshed successfully',
+    type: CredentialResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Unable to refresh token or token not found' })
+  @ApiNotFoundResponse({ description: 'Credential not found' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async refreshOAuthToken(
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+  ): Promise<CredentialResponseDto> {
+    return this.credentialsService.refreshOAuthToken(id, tenantId);
   }
 }

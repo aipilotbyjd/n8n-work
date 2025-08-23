@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
@@ -10,6 +9,7 @@ import { initializeOpenTelemetry } from './observability/tracing';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { setupSwagger } from './config/swagger.config';
 
 async function bootstrap() {
   // Initialize OpenTelemetry before importing any other modules
@@ -71,41 +71,8 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // Swagger Documentation
-  if (configService.get('NODE_ENV') !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('N8N-Work Orchestrator API')
-      .setDescription('Control plane for workflow automation platform')
-      .setVersion('1.0')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          name: 'JWT',
-          description: 'Enter JWT token',
-          in: 'header',
-        },
-        'JWT-auth',
-      )
-      .addApiKey(
-        {
-          type: 'apiKey',
-          name: 'X-API-Key',
-          in: 'header',
-          description: 'API key for service-to-service communication',
-        },
-        'API-key',
-      )
-      .build();
-
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-    });
-  }
+  // Comprehensive Swagger Documentation
+  setupSwagger(app);
 
   const port = configService.get('PORT', 3000);
   await app.listen(port);

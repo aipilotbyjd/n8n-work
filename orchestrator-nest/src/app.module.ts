@@ -102,7 +102,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     // Cache configuration
     CacheModule.register({
       isGlobal: true,
-      ttl: 300000, // 5 minutes in milliseconds
+      ttl: 300, // 5 minutes in seconds (changed from milliseconds)
       max: 100, // maximum number of items in cache
     }),
 

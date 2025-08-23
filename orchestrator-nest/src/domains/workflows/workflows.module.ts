@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Workflow } from './entities/workflow.entity';
 import { WorkflowsService } from './workflows.service';
@@ -13,7 +12,6 @@ import { AuditModule } from '../audit/audit.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Workflow]),
-    CacheModule,
     EventEmitterModule,
     TenantsModule,
     ObservabilityModule,

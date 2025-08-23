@@ -1,6 +1,6 @@
 
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -99,11 +99,11 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     // Health checks
     TerminusModule,
 
-    // Cache configuration
+    // Cache configuration - Simple in-memory cache
     CacheModule.register({
-      isGlobal: true,
-      ttl: 300, // 5 minutes in seconds (changed from milliseconds)
+      ttl: 300 * 1000, // 5 minutes in milliseconds
       max: 100, // maximum number of items in cache
+      isGlobal: true,
     }),
 
     // Core modules
@@ -148,4 +148,4 @@ import { ThrottlerGuard } from '@nestjs/throttler';
   ],
   exports: [SecurityService],
 })
-export class AppModule {}
+export class AppModule { }

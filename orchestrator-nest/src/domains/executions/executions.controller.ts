@@ -2,431 +2,334 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
   Body,
   Param,
+  Delete,
+  UseGuards,
   Query,
   HttpCode,
   HttpStatus,
-  ParseUUIDPipe,
-  UseGuards,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
+  ParseBoolPipe,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBearerAuth,
-  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Execution, ExecutionStatus } from '../../executions/entities/execution.entity';
-
-// DTOs for execution operations
-class StartExecutionDto {
-  workflowId: string;
-  triggerData?: Record<string, any>;
-  inputData?: Record<string, any>;
-  metadata?: Record<string, any>;
-}
-
-class ListExecutionsDto {
-  page?: number = 1;
-  limit?: number = 20;
-  status?: ExecutionStatus;
-  workflowId?: string;
-  startDate?: string;
-  endDate?: string;
-}
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Tenant } from '../../common/decorators/tenant.decorator';
+import { ExecutionsService } from './executions.service';
+import { StartExecutionDto } from './dto/start-execution.dto';
+import { ExecutionResponseDto } from './dto/execution-response.dto';
+import { ExecutionFilterDto } from './dto/execution-filter.dto';
+import { RetryExecutionDto } from './dto/retry-execution.dto';
+import { ExecutionStatus, ExecutionMode } from './entities/execution.entity';
 
 @ApiTags('Executions')
-@Controller({ path: 'executions', version: '1' })
+@Controller('executions')
+@UseGuards(JwtAuthGuard, TenantGuard)
 @ApiBearerAuth('JWT-auth')
 export class ExecutionsController {
-  constructor(
-    // Note: ExecutionsService would need to be created
-    // private readonly executionsService: ExecutionsService,
-  ) {}
+  constructor(private readonly executionsService: ExecutionsService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Start workflow execution',
-    description: 'Initiates execution of a workflow with optional input data',
+    summary: 'Start a workflow execution',
+    description: 'Starts a new workflow execution with optional input data.',
   })
-  @ApiBody({
-    type: StartExecutionDto,
-    description: 'Execution configuration',
-    examples: {
-      'basic-execution': {
-        summary: 'Basic workflow execution',
-        value: {
-          workflowId: '123e4567-e89b-12d3-a456-426614174000',
-          triggerData: { source: 'manual' },
-          inputData: { customerEmail: 'user@example.com' },
-          metadata: { priority: 'high' },
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
+  @ApiCreatedResponse({
     description: 'Execution started successfully',
-    type: Execution,
+    type: ExecutionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid execution request',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Workflow not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Workflow is not active or has reached execution limits',
-  })
+  @ApiBadRequestResponse({ description: 'Invalid execution request' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
   async startExecution(
     @Body() startExecutionDto: StartExecutionDto,
-  ): Promise<Execution> {
-    // Implementation would call executionsService.start()
-    throw new Error('Implementation pending');
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<ExecutionResponseDto> {
+    return this.executionsService.startExecution(startExecutionDto, tenantId, user.id);
   }
 
   @Get()
   @ApiOperation({
-    summary: 'List executions',
-    description: 'Retrieves a paginated list of workflow executions',
+    summary: 'Get workflow executions',
+    description: 'Retrieves a list of workflow executions with optional filtering.',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number (starts from 1)',
-    example: 1,
+  @ApiQuery({ name: 'workflowId', required: false, description: 'Filter by workflow ID' })
+  @ApiQuery({ name: 'status', required: false, enum: ExecutionStatus, description: 'Filter by execution status' })
+  @ApiQuery({ name: 'mode', required: false, enum: ExecutionMode, description: 'Filter by execution mode' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of results to return', example: 50 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Number of results to skip', example: 0 })
+  @ApiQuery({ name: 'includeData', required: false, type: Boolean, description: 'Include execution data in response' })
+  @ApiOkResponse({
+    description: 'List of executions',
+    type: [ExecutionResponseDto],
   })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of executions per page',
-    example: 20,
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async findExecutions(
+    @Tenant() tenantId: string,
+    @Query('workflowId') workflowId?: string,
+    @Query('status') status?: ExecutionStatus,
+    @Query('mode') mode?: ExecutionMode,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset = 0,
+    @Query('includeData', new DefaultValuePipe(false), ParseBoolPipe) includeData = false,
+  ): Promise<ExecutionResponseDto[]> {
+    const filters: ExecutionFilterDto = {
+      workflowId,
+      status,
+      mode,
+      limit,
+      offset,
+      includeData,
+    };
+    return this.executionsService.findExecutions(tenantId, filters);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: 'Get execution statistics',
+    description: 'Retrieves execution statistics for the tenant.',
   })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    enum: ExecutionStatus,
-    description: 'Filter by execution status',
-    example: ExecutionStatus.COMPLETED,
-  })
-  @ApiQuery({
-    name: 'workflowId',
-    required: false,
-    type: String,
-    description: 'Filter by workflow ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    type: String,
-    description: 'Filter executions started after this date (ISO 8601)',
-    example: '2023-12-01T00:00:00Z',
-  })
-  @ApiQuery({
-    name: 'endDate',
-    required: false,
-    type: String,
-    description: 'Filter executions started before this date (ISO 8601)',
-    example: '2023-12-31T23:59:59Z',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'List of executions retrieved successfully',
+  @ApiQuery({ name: 'workflowId', required: false, description: 'Filter stats by workflow ID' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days to include', example: 30 })
+  @ApiOkResponse({
+    description: 'Execution statistics',
     schema: {
       type: 'object',
       properties: {
-        data: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/Execution' },
-        },
-        total: { type: 'number', example: 150 },
-        page: { type: 'number', example: 1 },
-        limit: { type: 'number', example: 20 },
-        totalPages: { type: 'number', example: 8 },
+        totalExecutions: { type: 'number' },
+        successfulExecutions: { type: 'number' },
+        failedExecutions: { type: 'number' },
+        averageExecutionTime: { type: 'number' },
+        executionsByStatus: { type: 'object' },
+        executionsByMode: { type: 'object' },
+        dailyStats: { type: 'array', items: { type: 'object' } },
       },
     },
   })
-  async listExecutions(@Query() query: ListExecutionsDto): Promise<{
-    data: Execution[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
-    // Implementation would call executionsService.findAll()
-    throw new Error('Implementation pending');
+  async getExecutionStats(
+    @Tenant() tenantId: string,
+    @Query('workflowId') workflowId?: string,
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days = 30,
+  ) {
+    return this.executionsService.getExecutionStats(tenantId, workflowId, days);
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Get execution details',
-    description: 'Retrieves detailed information about a specific execution',
+    description: 'Retrieves detailed information about a specific execution.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiQuery({ name: 'includeData', required: false, type: Boolean, description: 'Include execution data' })
+  @ApiQuery({ name: 'includeLogs', required: false, type: Boolean, description: 'Include execution logs' })
+  @ApiOkResponse({
+    description: 'Execution details',
+    type: ExecutionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Execution details retrieved successfully',
-    type: Execution,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
-  })
+  @ApiNotFoundResponse({ description: 'Execution not found' })
   async getExecution(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Execution> {
-    // Implementation would call executionsService.findOne()
-    throw new Error('Implementation pending');
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+    @Query('includeData', new DefaultValuePipe(true), ParseBoolPipe) includeData = true,
+    @Query('includeLogs', new DefaultValuePipe(false), ParseBoolPipe) includeLogs = false,
+  ): Promise<ExecutionResponseDto> {
+    return this.executionsService.getExecution(id, tenantId, includeData, includeLogs);
   }
 
   @Post(':id/stop')
   @ApiOperation({
-    summary: 'Stop execution',
-    description: 'Stops a running execution',
+    summary: 'Stop a running execution',
+    description: 'Stops a currently running execution.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiOkResponse({
     description: 'Execution stopped successfully',
-    type: Execution,
+    type: ExecutionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Execution cannot be stopped (already completed)',
-  })
+  @ApiNotFoundResponse({ description: 'Execution not found' })
+  @ApiBadRequestResponse({ description: 'Execution cannot be stopped' })
   async stopExecution(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Execution> {
-    // Implementation would call executionsService.stop()
-    throw new Error('Implementation pending');
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<ExecutionResponseDto> {
+    return this.executionsService.stopExecution(id, tenantId, user.id);
   }
 
   @Post(':id/retry')
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Retry execution',
-    description: 'Creates a new execution by retrying a failed execution',
+    summary: 'Retry a failed execution',
+    description: 'Retries a failed execution, optionally from a specific node.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID to retry',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiOkResponse({
+    description: 'Execution retry started',
+    type: ExecutionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Retry execution started successfully',
-    type: Execution,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Execution cannot be retried',
-  })
+  @ApiNotFoundResponse({ description: 'Execution not found' })
+  @ApiBadRequestResponse({ description: 'Execution cannot be retried' })
   async retryExecution(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Execution> {
-    // Implementation would call executionsService.retry()
-    throw new Error('Implementation pending');
+    @Param('id') id: string,
+    @Body() retryExecutionDto: RetryExecutionDto,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<ExecutionResponseDto> {
+    return this.executionsService.retryExecution(id, retryExecutionDto, tenantId, user.id);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Delete execution',
-    description: 'Permanently deletes an execution record',
+    summary: 'Delete an execution',
+    description: 'Deletes an execution and all associated data.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
-    description: 'Execution deleted successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Cannot delete running execution',
-  })
-  async deleteExecution(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    // Implementation would call executionsService.remove()
-    throw new Error('Implementation pending');
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiNoContentResponse({ description: 'Execution deleted successfully' })
+  @ApiNotFoundResponse({ description: 'Execution not found' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteExecution(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ): Promise<void> {
+    return this.executionsService.deleteExecution(id, tenantId, user.id);
   }
 
   @Get(':id/logs')
   @ApiOperation({
     summary: 'Get execution logs',
-    description: 'Retrieves logs for a specific execution',
+    description: 'Retrieves detailed logs for a specific execution.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @ApiQuery({
-    name: 'level',
-    required: false,
-    enum: ['error', 'warn', 'info', 'debug'],
-    description: 'Filter logs by level',
-    example: 'error',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Maximum number of log entries to return',
-    example: 100,
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Execution logs retrieved successfully',
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiQuery({ name: 'level', required: false, description: 'Filter by log level' })
+  @ApiQuery({ name: 'nodeId', required: false, description: 'Filter by node ID' })
+  @ApiOkResponse({
+    description: 'Execution logs',
     schema: {
       type: 'object',
       properties: {
+        executionId: { type: 'string' },
         logs: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
               timestamp: { type: 'string', format: 'date-time' },
-              level: { type: 'string', enum: ['error', 'warn', 'info', 'debug'] },
+              level: { type: 'string' },
               message: { type: 'string' },
               nodeId: { type: 'string' },
-              metadata: { type: 'object' },
+              data: { type: 'object' },
             },
           },
         },
-        total: { type: 'number' },
       },
     },
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
-  })
   async getExecutionLogs(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
     @Query('level') level?: string,
-    @Query('limit') limit: number = 100,
-  ): Promise<{
-    logs: Array<{
-      timestamp: string;
-      level: string;
-      message: string;
-      nodeId?: string;
-      metadata?: Record<string, any>;
-    }>;
-    total: number;
-  }> {
-    // Implementation would call executionsService.getLogs()
-    throw new Error('Implementation pending');
+    @Query('nodeId') nodeId?: string,
+  ) {
+    return this.executionsService.getExecutionLogs(id, tenantId, level, nodeId);
   }
 
-  @Get(':id/metrics')
+  @Get(':id/timeline')
   @ApiOperation({
-    summary: 'Get execution metrics',
-    description: 'Retrieves performance metrics for a specific execution',
+    summary: 'Get execution timeline',
+    description: 'Retrieves a timeline of events for a specific execution.',
   })
-  @ApiParam({
-    name: 'id',
-    type: String,
-    description: 'Execution UUID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Execution metrics retrieved successfully',
+  @ApiParam({ name: 'id', description: 'Execution UUID' })
+  @ApiOkResponse({
+    description: 'Execution timeline',
     schema: {
       type: 'object',
       properties: {
         executionId: { type: 'string' },
-        totalDuration: { type: 'number', description: 'Total execution time in ms' },
-        nodeMetrics: {
+        timeline: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
+              timestamp: { type: 'string', format: 'date-time' },
+              event: { type: 'string' },
               nodeId: { type: 'string' },
-              duration: { type: 'number', description: 'Node execution time in ms' },
-              memoryUsage: { type: 'number', description: 'Memory usage in bytes' },
-              cpuUsage: { type: 'number', description: 'CPU usage percentage' },
+              nodeName: { type: 'string' },
               status: { type: 'string' },
+              duration: { type: 'number' },
+              data: { type: 'object' },
             },
-          },
-        },
-        resourceUsage: {
-          type: 'object',
-          properties: {
-            maxMemory: { type: 'number' },
-            avgCpuUsage: { type: 'number' },
-            networkIO: { type: 'number' },
           },
         },
       },
     },
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Execution not found',
+  async getExecutionTimeline(
+    @Param('id') id: string,
+    @Tenant() tenantId: string,
+  ) {
+    return this.executionsService.getExecutionTimeline(id, tenantId);
+  }
+
+  @Post('bulk/delete')
+  @ApiOperation({
+    summary: 'Bulk delete executions',
+    description: 'Deletes multiple executions based on criteria.',
   })
-  async getExecutionMetrics(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{
-    executionId: string;
-    totalDuration: number;
-    nodeMetrics: Array<{
-      nodeId: string;
-      duration: number;
-      memoryUsage: number;
-      cpuUsage: number;
-      status: string;
-    }>;
-    resourceUsage: {
-      maxMemory: number;
-      avgCpuUsage: number;
-      networkIO: number;
-    };
-  }> {
-    // Implementation would call executionsService.getMetrics()
-    throw new Error('Implementation pending');
+  @ApiOkResponse({
+    description: 'Bulk deletion completed',
+    schema: {
+      type: 'object',
+      properties: {
+        deletedCount: { type: 'number' },
+        criteria: { type: 'object' },
+      },
+    },
+  })
+  async bulkDeleteExecutions(
+    @Body() criteria: ExecutionFilterDto,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ) {
+    return this.executionsService.bulkDeleteExecutions(criteria, tenantId, user.id);
+  }
+
+  @Post('bulk/retry')
+  @ApiOperation({
+    summary: 'Bulk retry executions',
+    description: 'Retries multiple failed executions.',
+  })
+  @ApiOkResponse({
+    description: 'Bulk retry initiated',
+    schema: {
+      type: 'object',
+      properties: {
+        retriedCount: { type: 'number' },
+        skippedCount: { type: 'number' },
+        executionIds: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  async bulkRetryExecutions(
+    @Body() criteria: ExecutionFilterDto,
+    @CurrentUser() user: any,
+    @Tenant() tenantId: string,
+  ) {
+    return this.executionsService.bulkRetryExecutions(criteria, tenantId, user.id);
   }
 }

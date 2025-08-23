@@ -5,6 +5,7 @@ import { Workflow } from './entities/workflow.entity';
 import { WorkflowsService } from './workflows.service';
 import { WorkflowCompilerService } from './workflow-compiler.service';
 import { WorkflowValidationService } from './workflow-validation.service';
+import { WorkflowsController } from './workflows.controller';
 import { TenantsModule } from '../tenants/tenants.module';
 import { ObservabilityModule } from '../../observability/observability.module';
 import { AuditModule } from '../audit/audit.module';
@@ -17,7 +18,7 @@ import { AuditModule } from '../audit/audit.module';
     ObservabilityModule,
     AuditModule,
   ],
-  controllers: [],
+  controllers: [WorkflowsController],
   providers: [
     WorkflowsService,
     WorkflowCompilerService,

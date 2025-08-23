@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ExecutionsController } from './executions.controller';
 
 @Module({
-  controllers: [],
+  controllers: [ExecutionsController],
   providers: [],
   exports: [],
 })

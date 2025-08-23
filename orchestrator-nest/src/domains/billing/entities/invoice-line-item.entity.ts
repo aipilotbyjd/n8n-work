@@ -17,12 +17,15 @@ export class InvoiceLineItem {
   @Column('decimal', { precision: 10, scale: 2 })
   amount: number;
 
-  @ManyToOne(() => Invoice, invoice => invoice.lineItems)
+  @ManyToOne('Invoice', 'lineItems')
   invoice: Invoice;
 
   @Column()
   invoiceId: string;
 }
 
-// Import at the end to avoid circular dependencies
-import { Invoice } from './invoice.entity';
+// Type declaration for circular dependency
+interface Invoice {
+  id: string;
+  lineItems: InvoiceLineItem[];
+}

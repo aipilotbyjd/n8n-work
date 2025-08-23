@@ -88,7 +88,7 @@ export class Subscription {
   @Column('jsonb', { nullable: true })
   metadata: any;
 
-  @OneToMany(() => Invoice, invoice => invoice.subscription)
+  @OneToMany('Invoice', 'subscription')
   invoices: Invoice[];
 
   @CreateDateColumn()
@@ -98,5 +98,8 @@ export class Subscription {
   updatedAt: Date;
 }
 
-// Import Invoice here to avoid circular dependency
-import { Invoice } from './invoice.entity';
+// Type declaration for circular dependency
+interface Invoice {
+  id: string;
+  subscription: Subscription;
+}

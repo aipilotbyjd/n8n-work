@@ -53,13 +53,13 @@ export class Invoice {
   @Column({ nullable: true })
   stripeInvoiceId: string;
 
-  @ManyToOne(() => Subscription, subscription => subscription.invoices)
+  @ManyToOne('Subscription', 'invoices')
   subscription: Subscription;
 
   @Column()
   subscriptionId: string;
 
-  @OneToMany(() => InvoiceLineItem, lineItem => lineItem.invoice, { cascade: true })
+  @OneToMany('InvoiceLineItem', 'invoice', { cascade: true })
   lineItems: InvoiceLineItem[];
 
   @CreateDateColumn()
@@ -69,6 +69,13 @@ export class Invoice {
   updatedAt: Date;
 }
 
-// Import at the end to avoid circular dependencies
-import { Subscription } from './subscription.entity';
-import { InvoiceLineItem } from './invoice-line-item.entity';
+// Type declarations for circular dependencies
+interface Subscription {
+  id: string;
+  invoices: InvoiceLineItem[];
+}
+
+interface InvoiceLineItem {
+  id: string;
+  invoice: Invoice;
+}

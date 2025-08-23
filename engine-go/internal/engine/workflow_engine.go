@@ -599,5 +599,157 @@ func (e *WorkflowEngine) saveExecution(execution *ExecutionContext) error {
 
 func (e *WorkflowEngine) saveStepState(step *StepState) error {
 	// Save step state to database
-	return e.db.SaveStepState(step)
+		return e.db.SaveStepState(step)
+}
+
+// convertWorkflowToDAG converts a protobuf workflow to internal DAG structure
+func (e *WorkflowEngine) convertWorkflowToDAG(workflow *pb.Workflow) (*models.DAG, error) {
+	dag := &models.DAG{
+		ID:   workflow.Id,
+		Name: workflow.Name,
+		Nodes: make([]*models.Node, 0, len(workflow.Nodes)),
+	}
+	
+	// Convert nodes
+	for _, pbNode := range workflow.Nodes {
+		node := &models.Node{
+			ID:           pbNode.Id,
+			Type:         pbNode.Type,
+			Name:         pbNode.Name,
+			Parameters:   pbNode.Parameters,
+			Dependencies: make([]string, 0),
+		}
+		
+		// Convert node policy if present
+		if pbNode.Policy != nil {
+			node.Policy = &models.NodePolicy{
+				TimeoutSeconds:     int(pbNode.Policy.TimeoutSeconds),
+				RetryCount:         int(pbNode.Policy.RetryCount),
+				RetryDelay:         int(pbNode.Policy.RetryDelayMs),
+				MaxMemoryMB:        int(pbNode.Policy.MaxMemoryMb),
+				MaxCpuPercent:      int(pbNode.Policy.MaxCpuPercent),
+				AllowNetworkAccess: pbNode.Policy.AllowNetworkAccess,
+			}
+		}
+		
+		dag.Nodes = append(dag.Nodes, node)
+	}
+	
+	// Build dependencies from connections
+	dependencyMap := make(map[string][]string)
+	for _, conn := range workflow.Connections {
+		dependencyMap[conn.Target] = append(dependencyMap[conn.Target], conn.Source)
+	}
+	
+	// Apply dependencies to nodes
+	for _, node := range dag.Nodes {
+		if deps, exists := dependencyMap[node.ID]; exists {
+			node.Dependencies = deps
+		}
+	}
+	
+	return dag, nil
+}
+
+// validateDAG validates the DAG structure for cycles and other issues
+func (e *WorkflowEngine) validateDAG(dag *models.DAG) error {
+	// Check for cycles using DFS
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+	
+	// Build adjacency list
+	adjList := make(map[string][]string)
+	for _, node := range dag.Nodes {
+		adjList[node.ID] = node.Dependencies
+	}
+	
+	// Check each node for cycles
+	for _, node := range dag.Nodes {
+		if !visited[node.ID] {
+			if e.hasCycleDFS(node.ID, adjList, visited, recStack) {
+				return fmt.Errorf("cycle detected in DAG starting from node %s", node.ID)
+			}
+		}
+	}
+	
+	// Validate node references
+	nodeExists := make(map[string]bool)
+	for _, node := range dag.Nodes {
+		nodeExists[node.ID] = true
+	}
+	
+	for _, node := range dag.Nodes {
+		for _, depID := range node.Dependencies {
+			if !nodeExists[depID] {
+				return fmt.Errorf("node %s has dependency on non-existent node %s", node.ID, depID)
+			}
+		}
+	}
+	
+	// Validate at least one root node exists (node with no dependencies)
+	rootNodes := 0
+	for _, node := range dag.Nodes {
+		if len(node.Dependencies) == 0 {
+			rootNodes++
+		}
+	}
+	
+	if rootNodes == 0 {
+		return fmt.Errorf("DAG must have at least one root node (node with no dependencies)")
+	}
+	
+	return nil
+}
+
+// hasCycleDFS performs depth-first search to detect cycles
+func (e *WorkflowEngine) hasCycleDFS(nodeID string, adjList map[string][]string, visited, recStack map[string]bool) bool {
+	visited[nodeID] = true
+	recStack[nodeID] = true
+	
+	for _, depID := range adjList[nodeID] {
+		if !visited[depID] {
+			if e.hasCycleDFS(depID, adjList, visited, recStack) {
+				return true
+			}
+		} else if recStack[depID] {
+			return true
+		}
+	}
+	
+	recStack[nodeID] = false
+	return false
+}
+
+// convertMapStringString converts map[string]string to map[string]interface{}
+func convertMapStringString(input map[string]string) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range input {
+		result[k] = v
+	}
+	return result
+}
+
+// convertNodePolicy converts protobuf node policy to internal model
+func convertNodePolicy(policy *pb.NodePolicy) *pb.NodePolicy {
+	if policy == nil {
+		return nil
+	}
+	return policy // For now, return as-is since types match
+}
+
+// processStepResults processes step results in a separate goroutine
+func (e *WorkflowEngine) processStepResults(ctx context.Context) {
+	// This method would handle step results from the message queue
+	// For now, it's a placeholder since step results are handled in processExecution
+	e.logger.Debug("Step results processor started")
+	for {
+		select {
+		case <-ctx.Done():
+			e.logger.Debug("Step results processor stopped")
+			return
+		default:
+			// Process step results from queue
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }

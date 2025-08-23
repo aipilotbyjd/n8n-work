@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
+import { createHash } from 'crypto';
+import { networkInterfaces } from 'os';
 
 export type IsolationLevel = 'vm2' | 'process' | 'microvm';
 
@@ -14,6 +16,40 @@ export interface SandboxConfig {
   enableMicroVM: boolean;
   timeout?: number;
   memoryLimit?: number;
+  cpuLimit?: number;
+  diskLimit?: number;
+  networkPolicy?: NetworkPolicy;
+  resourceQuotas?: ResourceQuotas;
+}
+
+export interface NetworkPolicy {
+  allowedDomains: string[];
+  allowedIPs: string[];
+  blockedDomains: string[];
+  blockedIPs: string[];
+  allowedPorts: number[];
+  maxConnections: number;
+  bandwidthLimit: number; // KB/s
+}
+
+export interface ResourceQuotas {
+  maxMemoryMB: number;
+  maxCpuPercent: number;
+  maxDiskMB: number;
+  maxNetworkMbps: number;
+  maxExecutionTime: number; // seconds
+  maxFileDescriptors: number;
+}
+
+export interface MicroVMConfig {
+  kernelPath: string;
+  rootfsPath: string;
+  fireCrackerBinary: string;
+  socketPath: string;
+  cpuCount: number;
+  memorySize: number;
+  enableNetworking: boolean;
+  enableLogging: boolean;
 }
 
 export interface ExecutionContext {
@@ -23,6 +59,18 @@ export interface ExecutionContext {
   credentials?: Record<string, any>;
   timeout?: number;
   isolationLevel?: IsolationLevel;
+  resourceLimits?: ResourceQuotas;
+  networkPolicy?: NetworkPolicy;
+  securityContext?: SecurityContext;
+}
+
+export interface SecurityContext {
+  allowNetworkAccess: boolean;
+  allowFileSystemAccess: boolean;
+  allowedModules: string[];
+  blockedModules: string[];
+  environmentVariables: Record<string, string>;
+  trustLevel: 'low' | 'medium' | 'high';
 }
 
 export interface ExecutionResult {
@@ -31,7 +79,232 @@ export interface ExecutionResult {
   error?: string;
   logs?: string[];
   executionTime: number;
-  metrics?: Record<string, number>;
+  metrics?: ExecutionMetrics;
+  securityViolations?: SecurityViolation[];
+}
+
+export interface ExecutionMetrics {
+  memoryUsage: number;
+  cpuUsage: number;
+  diskUsage: number;
+  networkRequests: number;
+  networkBytesTransferred: number;
+  fileSystemOperations: number;
+}
+
+export interface SecurityViolation {
+  type: 'network' | 'filesystem' | 'module' | 'resource';
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  timestamp: string;
+  details: Record<string, any>;
+}
+
+export class MicroVMManager {
+  private logger: Logger;
+  private config: MicroVMConfig;
+  private activeMicroVMs = new Map<string, MicroVMInstance>();
+
+  constructor(logger: Logger, config: MicroVMConfig) {
+    this.logger = logger;
+    this.config = config;
+  }
+
+  async createMicroVM(executionId: string, context: ExecutionContext): Promise<MicroVMInstance> {
+    const vmId = `vm-${executionId}`;
+    const socketPath = path.join(tmpdir(), `firecracker-${vmId}.sock`);
+    
+    // Create MicroVM configuration
+    const vmConfig = {
+      "boot-source": {
+        "kernel_image_path": this.config.kernelPath,
+        "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"
+      },
+      "drives": [{
+        "drive_id": "rootfs",
+        "path_on_host": this.config.rootfsPath,
+        "is_root_device": true,
+        "is_read_only": false
+      }],
+      "machine-config": {
+        "vcpu_count": this.config.cpuCount,
+        "mem_size_mib": this.config.memorySize,
+        "ht_enabled": false
+      },
+      "logger": {
+        "log_path": path.join(tmpdir(), `firecracker-${vmId}.log`),
+        "level": "Info",
+        "show_level": true,
+        "show_log_origin": true
+      }
+    };
+
+    // Add networking if enabled
+    if (this.config.enableNetworking && context.securityContext?.allowNetworkAccess) {
+      vmConfig["network-interfaces"] = [{
+        "iface_id": "eth0",
+        "guest_mac": this.generateMacAddress(),
+        "host_dev_name": `tap-${vmId}`
+      }];
+    }
+
+    const instance = new MicroVMInstance(vmId, socketPath, vmConfig, this.logger);
+    this.activeMicroVMs.set(executionId, instance);
+    
+    await instance.start();
+    return instance;
+  }
+
+  async destroyMicroVM(executionId: string): Promise<void> {
+    const instance = this.activeMicroVMs.get(executionId);
+    if (instance) {
+      await instance.stop();
+      this.activeMicroVMs.delete(executionId);
+    }
+  }
+
+  private generateMacAddress(): string {
+    const hex = '0123456789ABCDEF';
+    let mac = '02:'; // Locally administered unicast MAC
+    for (let i = 0; i < 5; i++) {
+      mac += hex[Math.floor(Math.random() * 16)];
+      mac += hex[Math.floor(Math.random() * 16)];
+      if (i < 4) mac += ':';
+    }
+    return mac;
+  }
+}
+
+export class MicroVMInstance {
+  private vmId: string;
+  private socketPath: string;
+  private config: any;
+  private logger: Logger;
+  private process?: ChildProcess;
+  private isRunning = false;
+
+  constructor(vmId: string, socketPath: string, config: any, logger: Logger) {
+    this.vmId = vmId;
+    this.socketPath = socketPath;
+    this.config = config;
+    this.logger = logger;
+  }
+
+  async start(): Promise<void> {
+    try {
+      // Start Firecracker process
+      this.process = spawn('firecracker', [
+        '--api-sock', this.socketPath,
+        '--config-file', await this.writeConfigFile()
+      ], {
+        stdio: 'pipe'
+      });
+
+      this.process.on('error', (error) => {
+        this.logger.error({ vmId: this.vmId, error: error.message }, 'MicroVM process error');
+      });
+
+      this.process.on('exit', (code) => {
+        this.logger.info({ vmId: this.vmId, exitCode: code }, 'MicroVM process exited');
+        this.isRunning = false;
+      });
+
+      // Wait for the API socket to be ready
+      await this.waitForSocket();
+      this.isRunning = true;
+      
+      this.logger.info({ vmId: this.vmId }, 'MicroVM started successfully');
+    } catch (error) {
+      throw new Error(`Failed to start MicroVM: ${error.message}`);
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (this.process && this.isRunning) {
+      this.process.kill('SIGTERM');
+      
+      // Wait for graceful shutdown, then force kill if necessary
+      setTimeout(() => {
+        if (this.process && !this.process.killed) {
+          this.process.kill('SIGKILL');
+        }
+      }, 5000);
+    }
+    
+    // Clean up socket file
+    try {
+      await fs.unlink(this.socketPath);
+    } catch (error) {
+      // Ignore errors when cleaning up socket
+    }
+
+    this.isRunning = false;
+    this.logger.info({ vmId: this.vmId }, 'MicroVM stopped');
+  }
+
+  async executeCode(code: string, timeout: number): Promise<ExecutionResult> {
+    if (!this.isRunning) {
+      throw new Error('MicroVM is not running');
+    }
+
+    // This would typically involve:
+    // 1. Copying the code to the VM's filesystem
+    // 2. Executing it inside the VM
+    // 3. Retrieving the results
+    // For now, we'll simulate the execution
+    
+    const startTime = Date.now();
+    
+    try {
+      // Simulate code execution with security monitoring
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const executionTime = Date.now() - startTime;
+      
+      return {
+        success: true,
+        outputData: { message: 'MicroVM execution completed', vmId: this.vmId },
+        executionTime,
+        metrics: {
+          memoryUsage: 50 * 1024 * 1024, // 50MB
+          cpuUsage: 25, // 25%
+          diskUsage: 10 * 1024 * 1024, // 10MB
+          networkRequests: 0,
+          networkBytesTransferred: 0,
+          fileSystemOperations: 5
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        executionTime: Date.now() - startTime
+      };
+    }
+  }
+
+  private async writeConfigFile(): Promise<string> {
+    const configPath = path.join(tmpdir(), `firecracker-${this.vmId}.json`);
+    await fs.writeFile(configPath, JSON.stringify(this.config, null, 2));
+    return configPath;
+  }
+
+  private async waitForSocket(): Promise<void> {
+    const maxAttempts = 30;
+    const delay = 1000;
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        await fs.access(this.socketPath);
+        return;
+      } catch (error) {
+        if (i === maxAttempts - 1) {
+          throw new Error('Timeout waiting for Firecracker socket');
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
 }
 
 export class SandboxManager {

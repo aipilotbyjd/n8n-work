@@ -103,7 +103,9 @@ export class CredentialsService {
       resourceId: savedCredential.id,
       tenantId,
       userId,
-      metadata: { credentialName: savedCredential.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      newValues: { credentialName: savedCredential.name },
     });
 
     // Update metrics
@@ -221,7 +223,9 @@ export class CredentialsService {
       resourceId: savedCredential.id,
       tenantId,
       userId,
-      metadata: { credentialName: savedCredential.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      newValues: { credentialName: savedCredential.name },
     });
 
     return this.toResponseDto(savedCredential);
@@ -259,7 +263,9 @@ export class CredentialsService {
       resourceId: id,
       tenantId,
       userId,
-      metadata: { credentialName: credential.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      oldValues: { credentialName: credential.name },
     });
 
     // Update metrics

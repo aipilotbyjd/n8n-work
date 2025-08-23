@@ -203,9 +203,6 @@ export function setupSwagger(app: INestApplication): void {
       }
     `,
     
-    // JSON editor
-    jsonEditor: true,
-    
     // Explorer
     explorer: true,
   });

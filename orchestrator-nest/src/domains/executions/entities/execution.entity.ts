@@ -288,4 +288,4 @@ export class Execution {
 
   @Column('jsonb', { nullable: true })
   notifications: any; // Notifications sent during execution
-}"
+}

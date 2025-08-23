@@ -70,6 +70,12 @@ export const configuration = () => ({
     minioSecretKey: process.env.MINIO_SECRET_KEY || 'n8nwork_dev',
   },
 
+  // Vault
+  vault: {
+    endpoint: process.env.VAULT_ENDPOINT || 'http://localhost:8200',
+    token: process.env.VAULT_TOKEN || 'dev-root-token',
+  },
+
   // Observability
   observability: {
     otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317',

@@ -8,6 +8,37 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
+    // Check if DATABASE_URL is provided (Docker environment)
+    const databaseUrl = process.env.DATABASE_URL;
+    
+    if (databaseUrl) {
+      // Parse DATABASE_URL (format: postgresql://user:password@host:port/database)
+      const url = new URL(databaseUrl);
+      
+      return {
+        type: 'postgres',
+        host: url.hostname,
+        port: parseInt(url.port) || 5432,
+        username: url.username,
+        password: url.password,
+        database: url.pathname.slice(1), // Remove leading '/'
+        ssl: false, // Docker internal communication doesn't need SSL
+        synchronize: process.env.DB_SYNCHRONIZE === 'true' || false,
+        logging: process.env.DB_LOGGING === 'true' || false,
+        migrationsRun: process.env.DB_MIGRATIONS_RUN === 'true' || true,
+        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+        migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+        subscribers: [__dirname + '/../**/*.subscriber{.ts,.js}'],
+        extra: {
+          // Connection pool configuration
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+        },
+      };
+    }
+    
+    // Fallback to individual environment variables
     const config = this.configService.get('database');
     
     return {

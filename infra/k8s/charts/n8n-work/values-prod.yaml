@@ -1,0 +1,293 @@
+# Production Environment Configuration
+environment: production
+
+# Full production scaling
+orchestrator:
+  replicaCount: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/rate-limit: "1000"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: api.n8n-work.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: orchestrator-prod-tls
+        hosts:
+          - api.n8n-work.com
+
+engine-go:
+  replicaCount: 5
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 75
+  nodeSelector:
+    node-type: compute-optimized
+  tolerations:
+    - key: "compute-optimized"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+
+node-runner-js:
+  replicaCount: 10
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 10
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector:
+    node-type: sandbox-workload
+  tolerations:
+    - key: "sandbox-workload"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  # Strict network policies for production
+  networkPolicy:
+    enabled: true
+    policyTypes:
+      - Ingress
+      - Egress
+    ingress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: engine-go
+        ports:
+          - protocol: TCP
+            port: 3001
+    egress:
+      - to: []
+        ports:
+          - protocol: TCP
+            port: 443 # HTTPS only
+          - protocol: TCP
+            port: 53  # DNS
+          - protocol: UDP
+            port: 53  # DNS
+
+# Production database with high availability
+postgresql:
+  architecture: replication
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-type
+                  operator: In
+                  values:
+                    - database
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+rabbitmq:
+  replicaCount: 3
+  clustering:
+    enabled: true
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "fast-ssd"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                  - messaging
+
+redis:
+  architecture: replication
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 250m
+        memory: 512Mi
+      requests:
+        cpu: 125m
+        memory: 256Mi
+
+# Full observability stack for production
+observability:
+  prometheus:
+    enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+        size: 100Gi
+        storageClass: "fast-ssd"
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+      retention: "30d"
+      retentionSize: "80GB"
+  
+  grafana:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    plugins:
+      - grafana-piechart-panel
+      - grafana-worldmap-panel
+      - grafana-clock-panel
+  
+  jaeger:
+    enabled: true
+    storage:
+      type: elasticsearch
+      elasticsearch:
+        host: elasticsearch
+        port: 9200
+  
+  loki:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: "fast-ssd"
+
+# Production PDBs
+podDisruptionBudget:
+  orchestrator:
+    enabled: true
+    minAvailable: 2
+  engine-go:
+    enabled: true
+    minAvailable: 3
+  node-runner-js:
+    enabled: true
+    minAvailable: 5
+
+# Production security settings
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress: []
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
+# Production environment variables
+commonEnv:
+  - name: LOG_LEVEL
+    value: "warn"
+  - name: ENABLE_METRICS
+    value: "true"
+  - name: ENABLE_TRACING
+    value: "true"
+  - name: ENABLE_SECURITY_SCANNING
+    value: "true"
+  - name: MAX_REQUEST_SIZE
+    value: "10mb"
+  - name: RATE_LIMIT_ENABLED
+    value: "true"

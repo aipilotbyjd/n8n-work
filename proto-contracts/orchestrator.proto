@@ -19,6 +19,14 @@ service OrchestratorService {
   rpc StopExecution(StopExecutionRequest) returns (StopExecutionResponse);
   rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse);
   
+  // Real-time Workflow Streaming
+  rpc StreamWorkflowUpdates(StreamWorkflowRequest) returns (stream WorkflowUpdateEvent);
+  rpc StreamExecutionUpdates(StreamExecutionUpdatesRequest) returns (stream ExecutionUpdateEvent);
+  rpc StreamTenantActivity(StreamTenantActivityRequest) returns (stream TenantActivityEvent);
+  
+  // Bidirectional Communication
+  rpc WorkflowChannel(stream WorkflowCommand) returns (stream WorkflowResponse);
+  
   // Authentication & Authorization
   rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
@@ -349,4 +357,167 @@ message HealthRequest {
 message HealthResponse {
   string status = 1;
   map<string, string> details = 2;
+}
+
+// Streaming Messages for Real-time Updates
+
+// Workflow Update Streaming
+message StreamWorkflowRequest {
+  string tenant_id = 1;
+  string workflow_id = 2; // optional, if empty streams all workflows
+  repeated WorkflowEventType event_types = 3;
+}
+
+enum WorkflowEventType {
+  WORKFLOW_EVENT_UNKNOWN = 0;
+  WORKFLOW_CREATED = 1;
+  WORKFLOW_UPDATED = 2;
+  WORKFLOW_DELETED = 3;
+  WORKFLOW_ACTIVATED = 4;
+  WORKFLOW_DEACTIVATED = 5;
+  WORKFLOW_PUBLISHED = 6;
+  WORKFLOW_VALIDATION_FAILED = 7;
+}
+
+message WorkflowUpdateEvent {
+  string workflow_id = 1;
+  string tenant_id = 2;
+  WorkflowEventType event_type = 3;
+  string timestamp = 4;
+  Workflow workflow = 5; // optional, for create/update events
+  string user_id = 6;
+  string message = 7;
+  map<string, string> metadata = 8;
+}
+
+// Execution Update Streaming
+message StreamExecutionUpdatesRequest {
+  string tenant_id = 1;
+  string workflow_id = 2; // optional
+  string execution_id = 3; // optional
+  repeated ExecutionEventType event_types = 4;
+}
+
+enum ExecutionEventType {
+  EXECUTION_EVENT_UNKNOWN = 0;
+  EXECUTION_STARTED = 1;
+  EXECUTION_STEP_STARTED = 2;
+  EXECUTION_STEP_COMPLETED = 3;
+  EXECUTION_STEP_FAILED = 4;
+  EXECUTION_COMPLETED = 5;
+  EXECUTION_FAILED = 6;
+  EXECUTION_CANCELLED = 7;
+  EXECUTION_TIMEOUT = 8;
+  EXECUTION_PAUSED = 9;
+  EXECUTION_RESUMED = 10;
+}
+
+message ExecutionUpdateEvent {
+  string execution_id = 1;
+  string workflow_id = 2;
+  string tenant_id = 3;
+  ExecutionEventType event_type = 4;
+  string timestamp = 5;
+  ExecutionStatus status = 6;
+  string step_id = 7; // optional, for step-specific events
+  StepStatus step_status = 8; // optional
+  string message = 9;
+  map<string, string> data = 10;
+  ExecutionProgress progress = 11;
+}
+
+message ExecutionProgress {
+  int32 total_steps = 1;
+  int32 completed_steps = 2;
+  int32 failed_steps = 3;
+  int32 running_steps = 4;
+  int32 pending_steps = 5;
+  double completion_percentage = 6;
+  string estimated_completion = 7;
+}
+
+// Tenant Activity Streaming
+message StreamTenantActivityRequest {
+  string tenant_id = 1;
+  repeated ActivityType activity_types = 2;
+  string since_timestamp = 3; // optional, for historical data
+}
+
+enum ActivityType {
+  ACTIVITY_UNKNOWN = 0;
+  USER_LOGIN = 1;
+  USER_LOGOUT = 2;
+  WORKFLOW_ACTION = 3;
+  EXECUTION_ACTION = 4;
+  API_CALL = 5;
+  WEBHOOK_TRIGGERED = 6;
+  QUOTA_EXCEEDED = 7;
+  SECURITY_EVENT = 8;
+  SYSTEM_EVENT = 9;
+}
+
+message TenantActivityEvent {
+  string tenant_id = 1;
+  string user_id = 2;
+  ActivityType activity_type = 3;
+  string timestamp = 4;
+  string resource_id = 5; // workflow_id, execution_id, etc.
+  string action = 6;
+  string description = 7;
+  map<string, string> metadata = 8;
+  string ip_address = 9;
+  string user_agent = 10;
+}
+
+// Bidirectional Communication
+message WorkflowCommand {
+  string command_id = 1;
+  string tenant_id = 2;
+  string workflow_id = 3;
+  string execution_id = 4; // optional
+  WorkflowCommandType command_type = 5;
+  map<string, string> parameters = 6;
+  string timestamp = 7;
+  string user_id = 8;
+}
+
+enum WorkflowCommandType {
+  WORKFLOW_COMMAND_UNKNOWN = 0;
+  START_EXECUTION = 1;
+  STOP_EXECUTION = 2;
+  PAUSE_EXECUTION = 3;
+  RESUME_EXECUTION = 4;
+  RESTART_EXECUTION = 5;
+  SKIP_STEP = 6;
+  RETRY_STEP = 7;
+  UPDATE_VARIABLES = 8;
+  SET_BREAKPOINT = 9;
+  REMOVE_BREAKPOINT = 10;
+  GET_EXECUTION_STATE = 11;
+  SUBSCRIBE_TO_EVENTS = 12;
+  UNSUBSCRIBE_FROM_EVENTS = 13;
+}
+
+message WorkflowResponse {
+  string command_id = 1;
+  string execution_id = 2;
+  string workflow_id = 3;
+  bool success = 4;
+  string error_message = 5;
+  string timestamp = 6;
+  WorkflowResponseType response_type = 7;
+  map<string, string> data = 8;
+  ExecutionStatus execution_status = 9; // optional
+}
+
+enum WorkflowResponseType {
+  WORKFLOW_RESPONSE_UNKNOWN = 0;
+  COMMAND_ACKNOWLEDGED = 1;
+  COMMAND_COMPLETED = 2;
+  COMMAND_FAILED = 3;
+  EXECUTION_STATE = 4;
+  EVENT_NOTIFICATION = 5;
+  HEARTBEAT = 6;
+  CONNECTION_ESTABLISHED = 7;
+  CONNECTION_CLOSED = 8;
 }

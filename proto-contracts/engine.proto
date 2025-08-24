@@ -22,6 +22,15 @@ service EngineService {
   rpc GetResourceUsage(GetResourceUsageRequest) returns (GetResourceUsageResponse);
   rpc UpdateRateLimits(UpdateRateLimitsRequest) returns (UpdateRateLimitsResponse);
   
+  // Real-time Streaming
+  rpc StreamExecutionEvents(StreamExecutionRequest) returns (stream ExecutionEvent);
+  rpc StreamStepUpdates(StreamStepRequest) returns (stream StepUpdateEvent);
+  rpc StreamResourceMetrics(StreamMetricsRequest) returns (stream ResourceMetricsEvent);
+  rpc StreamWorkflowLogs(StreamLogsRequest) returns (stream LogEvent);
+  
+  // Bidirectional Streaming
+  rpc ExecutionChannel(stream ExecutionCommand) returns (stream ExecutionResponse);
+  
   // Health Check
   rpc Health(HealthRequest) returns (HealthResponse);
 }
@@ -196,4 +205,165 @@ message HealthRequest {}
 message HealthResponse {
   string status = 1;
   map<string, string> details = 2;
+}
+
+// Streaming Messages
+
+// Execution Event Streaming
+message StreamExecutionRequest {
+  string execution_id = 1;
+  string tenant_id = 2;
+  repeated ExecutionEventType event_types = 3;
+}
+
+enum ExecutionEventType {
+  EXECUTION_EVENT_UNKNOWN = 0;
+  EXECUTION_STARTED = 1;
+  EXECUTION_COMPLETED = 2;
+  EXECUTION_FAILED = 3;
+  EXECUTION_CANCELLED = 4;
+  STEP_STARTED = 5;
+  STEP_COMPLETED = 6;
+  STEP_FAILED = 7;
+  STEP_RETRYING = 8;
+  RESOURCE_LIMIT_EXCEEDED = 9;
+  EXECUTION_PAUSED = 10;
+  EXECUTION_RESUMED = 11;
+}
+
+message ExecutionEvent {
+  string execution_id = 1;
+  ExecutionEventType event_type = 2;
+  string timestamp = 3;
+  string step_id = 4; // optional, for step-specific events
+  map<string, string> data = 5;
+  ExecutionProgress progress = 6;
+  string message = 7;
+  orchestrator.ExecutionStatus status = 8;
+}
+
+// Step Update Streaming
+message StreamStepRequest {
+  string execution_id = 1;
+  string step_id = 2; // optional, if empty streams all steps
+  string tenant_id = 3;
+}
+
+message StepUpdateEvent {
+  string execution_id = 1;
+  string step_id = 2;
+  string node_id = 3;
+  orchestrator.StepStatus status = 4;
+  string timestamp = 5;
+  string input_data = 6;
+  string output_data = 7;
+  string error_message = 8;
+  ExecutionMetrics metrics = 9;
+  int32 retry_count = 10;
+  map<string, string> metadata = 11;
+}
+
+// Resource Metrics Streaming
+message StreamMetricsRequest {
+  string tenant_id = 1;
+  string execution_id = 2; // optional
+  int32 interval_seconds = 3; // metrics reporting interval
+  repeated MetricType metric_types = 4;
+}
+
+enum MetricType {
+  METRIC_UNKNOWN = 0;
+  CPU_USAGE = 1;
+  MEMORY_USAGE = 2;
+  NETWORK_IO = 3;
+  DISK_IO = 4;
+  EXECUTION_RATE = 5;
+  ERROR_RATE = 6;
+  QUEUE_LENGTH = 7;
+  RESPONSE_TIME = 8;
+}
+
+message ResourceMetricsEvent {
+  string timestamp = 1;
+  string tenant_id = 2;
+  string execution_id = 3; // optional
+  MetricType metric_type = 4;
+  double value = 5;
+  string unit = 6;
+  map<string, string> labels = 7;
+  ResourceUsage resource_usage = 8;
+}
+
+// Log Streaming
+message StreamLogsRequest {
+  string execution_id = 1;
+  string step_id = 2; // optional
+  string tenant_id = 3;
+  LogLevel min_level = 4;
+  bool follow = 5; // if true, keeps streaming new logs
+  int32 tail_lines = 6; // number of recent lines to include
+}
+
+enum LogLevel {
+  LOG_UNKNOWN = 0;
+  DEBUG = 1;
+  INFO = 2;
+  WARN = 3;
+  ERROR = 4;
+  FATAL = 5;
+}
+
+message LogEvent {
+  string timestamp = 1;
+  string execution_id = 2;
+  string step_id = 3;
+  string node_id = 4;
+  LogLevel level = 5;
+  string message = 6;
+  map<string, string> fields = 7;
+  string source = 8; // component that generated the log
+  string trace_id = 9; // for distributed tracing
+}
+
+// Bidirectional Streaming
+message ExecutionCommand {
+  string command_id = 1;
+  string execution_id = 2;
+  string tenant_id = 3;
+  ExecutionCommandType command_type = 4;
+  map<string, string> parameters = 5;
+  string timestamp = 6;
+}
+
+enum ExecutionCommandType {
+  COMMAND_UNKNOWN = 0;
+  PAUSE_EXECUTION = 1;
+  RESUME_EXECUTION = 2;
+  CANCEL_EXECUTION = 3;
+  SKIP_STEP = 4;
+  RETRY_STEP = 5;
+  UPDATE_VARIABLES = 6;
+  SET_BREAKPOINT = 7;
+  REMOVE_BREAKPOINT = 8;
+  GET_SNAPSHOT = 9;
+}
+
+message ExecutionResponse {
+  string command_id = 1;
+  string execution_id = 2;
+  bool success = 3;
+  string error_message = 4;
+  string timestamp = 5;
+  ExecutionResponseType response_type = 6;
+  map<string, string> data = 7;
+}
+
+enum ExecutionResponseType {
+  RESPONSE_UNKNOWN = 0;
+  COMMAND_ACKNOWLEDGED = 1;
+  COMMAND_COMPLETED = 2;
+  COMMAND_FAILED = 3;
+  EXECUTION_SNAPSHOT = 4;
+  EXECUTION_STATE_CHANGED = 5;
+  HEARTBEAT = 6;
 }

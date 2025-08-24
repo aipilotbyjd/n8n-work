@@ -1,0 +1,45 @@
+apiVersion: v2
+name: observability
+description: Complete observability stack for N8N Work - Monitoring, Logging, and Alerting
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - monitoring
+  - logging
+  - alerting
+  - prometheus
+  - grafana
+  - loki
+  - jaeger
+home: https://github.com/your-org/n8n-work
+sources:
+  - https://github.com/your-org/n8n-work/tree/main/infra/k8s/charts/observability
+maintainers:
+  - name: N8N Work Team
+    email: team@n8n-work.com
+
+dependencies:
+  - name: kube-prometheus-stack
+    version: "55.5.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: prometheus.enabled
+
+  - name: loki
+    version: "5.41.4"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: loki.enabled
+
+  - name: promtail
+    version: "6.15.3"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: promtail.enabled
+
+  - name: jaeger
+    version: "0.73.0"
+    repository: "https://jaegertracing.github.io/helm-charts"
+    condition: jaeger.enabled
+
+annotations:
+  category: Observability
+  licenses: Apache-2.0

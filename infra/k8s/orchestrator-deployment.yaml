@@ -5,7 +5,8 @@ metadata:
   namespace: n8n-work
   labels:
     app: orchestrator-nest
-    component: control-plane
+    component: orchestrator
+    tier: backend
     version: v1.0.0
 spec:
   replicas: 3
@@ -13,7 +14,7 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 1
-      maxUnavailable: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: orchestrator-nest
@@ -21,28 +22,30 @@ spec:
     metadata:
       labels:
         app: orchestrator-nest
-        component: control-plane
+        component: orchestrator
+        tier: backend
         version: v1.0.0
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3000"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: n8n-work-orchestrator
+      serviceAccountName: orchestrator-service-account
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        runAsGroup: 1000
         fsGroup: 1000
       containers:
-      - name: orchestrator
-        image: n8n-work/orchestrator-nest:latest
-        imagePullPolicy: Always
+      - name: orchestrator-nest
+        image: n8n-work/orchestrator-nest:1.0.0
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 3000
           protocol: TCP
         - name: grpc
-          containerPort: 50051
+          containerPort: 5000
           protocol: TCP
         env:
         - name: NODE_ENV
@@ -50,82 +53,118 @@ spec:
         - name: PORT
           value: "3000"
         - name: GRPC_PORT
-          value: "50051"
-        - name: DATABASE_URL
+          value: "5000"
+        - name: DATABASE_HOST
           valueFrom:
             secretKeyRef:
-              name: orchestrator-secrets
-              key: database-url
-        - name: REDIS_URL
+              name: database-credentials
+              key: host
+        - name: DATABASE_PORT
           valueFrom:
             secretKeyRef:
-              name: orchestrator-secrets
-              key: redis-url
+              name: database-credentials
+              key: port
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: username
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: password
+        - name: DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: database
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: port
         - name: RABBITMQ_URL
           valueFrom:
             secretKeyRef:
-              name: orchestrator-secrets
-              key: rabbitmq-url
+              name: rabbitmq-credentials
+              key: url
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: orchestrator-secrets
-              key: jwt-secret
+              name: jwt-secret
+              key: secret
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
-              name: orchestrator-secrets
-              key: encryption-key
-        - name: JAEGER_ENDPOINT
-          value: "http://jaeger-collector.observability:14268/api/traces"
-        - name: VAULT_ADDR
-          value: "http://vault.vault:8200"
-        - name: VAULT_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: vault-secrets
-              key: vault-token
+              name: encryption-key
+              key: key
+        - name: ENGINE_GRPC_URL
+          value: "engine-go-service:5001"
+        - name: NODE_RUNNER_GRPC_URL
+          value: "node-runner-service:5002"
         resources:
           requests:
             memory: "512Mi"
             cpu: "250m"
+            ephemeral-storage: "1Gi"
           limits:
             memory: "1Gi"
             cpu: "500m"
+            ephemeral-storage: "2Gi"
         livenessProbe:
           httpGet:
-            path: /api/v1/health
+            path: /health
             port: http
-            scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /api/v1/health/ready
+            path: /health/ready
             port: http
-            scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
-          failureThreshold: 1
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 15"]
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
-        - name: config
+        - name: tmp
+          mountPath: /tmp
+        - name: app-logs
+          mountPath: /app/logs
+        - name: config-volume
           mountPath: /app/config
           readOnly: true
-        - name: temp
-          mountPath: /tmp
       volumes:
-      - name: config
+      - name: tmp
+        emptyDir: {}
+      - name: app-logs
+        emptyDir: {}
+      - name: config-volume
         configMap:
           name: orchestrator-config
-      - name: temp
-        emptyDir: {}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -135,23 +174,27 @@ spec:
                 matchExpressions:
                 - key: app
                   operator: In
-                  values: ["orchestrator-nest"]
+                  values:
+                  - orchestrator-nest
               topologyKey: kubernetes.io/hostname
       tolerations:
-      - key: "node-role.kubernetes.io/spot"
-        operator: "Equal"
-        value: "true"
-        effect: "NoSchedule"
-
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: orchestrator-nest
+  name: orchestrator-nest-service
   namespace: n8n-work
   labels:
     app: orchestrator-nest
-    component: control-plane
+    component: orchestrator
 spec:
   type: ClusterIP
   ports:
@@ -160,87 +203,62 @@ spec:
     targetPort: http
     protocol: TCP
   - name: grpc
-    port: 50051
+    port: 5000
     targetPort: grpc
     protocol: TCP
   selector:
     app: orchestrator-nest
-
 ---
 apiVersion: v1
-kind: Service
+kind: ServiceAccount
 metadata:
-  name: orchestrator-nest-headless
+  name: orchestrator-service-account
   namespace: n8n-work
   labels:
     app: orchestrator-nest
-    component: control-plane
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: http
-    port: 3000
-    targetPort: http
-    protocol: TCP
-  - name: grpc
-    port: 50051
-    targetPort: grpc
-    protocol: TCP
-  selector:
-    app: orchestrator-nest
-
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
-  name: orchestrator-nest-netpol
+  namespace: n8n-work
+  name: orchestrator-role
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: orchestrator-rolebinding
+  namespace: n8n-work
+subjects:
+- kind: ServiceAccount
+  name: orchestrator-service-account
+  namespace: n8n-work
+roleRef:
+  kind: Role
+  name: orchestrator-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: orchestrator-pdb
   namespace: n8n-work
 spec:
-  podSelector:
+  minAvailable: 2
+  selector:
     matchLabels:
       app: orchestrator-nest
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: ingress-nginx
-    ports:
-    - protocol: TCP
-      port: 3000
-  - from:
-    - podSelector:
-        matchLabels:
-          component: execution-plane
-    ports:
-    - protocol: TCP
-      port: 50051
-  egress:
-  - to: []
-    ports:
-    - protocol: TCP
-      port: 5432  # PostgreSQL
-    - protocol: TCP
-      port: 6379  # Redis
-    - protocol: TCP
-      port: 5672  # RabbitMQ
-    - protocol: TCP
-      port: 8200  # Vault
-    - protocol: TCP
-      port: 14268 # Jaeger
-    - protocol: TCP
-      port: 50052 # Engine gRPC
-    - protocol: UDP
-      port: 53    # DNS
-
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: orchestrator-nest-hpa
+  name: orchestrator-hpa
   namespace: n8n-work
 spec:
   scaleTargetRef:
@@ -248,7 +266,7 @@ spec:
     kind: Deployment
     name: orchestrator-nest
   minReplicas: 3
-  maxReplicas: 20
+  maxReplicas: 10
   metrics:
   - type: Resource
     resource:
@@ -262,13 +280,6 @@ spec:
       target:
         type: Utilization
         averageUtilization: 80
-  - type: Pods
-    pods:
-      metric:
-        name: http_requests_per_second
-      target:
-        type: AverageValue
-        averageValue: "100"
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -285,110 +296,3 @@ spec:
       - type: Pods
         value: 2
         periodSeconds: 60
-      selectPolicy: Max
-
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: orchestrator-nest-pdb
-  namespace: n8n-work
-spec:
-  minAvailable: 2
-  selector:
-    matchLabels:
-      app: orchestrator-nest
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: orchestrator-config
-  namespace: n8n-work
-data:
-  config.yaml: |
-    server:
-      port: 3000
-      grpcPort: 50051
-      cors:
-        origins: ['https://app.n8n-work.com', 'https://admin.n8n-work.com']
-        credentials: true
-    
-    database:
-      ssl: true
-      pool:
-        min: 5
-        max: 20
-      migrations:
-        run: true
-    
-    cache:
-      ttl: 300
-      maxSize: 1000
-    
-    security:
-      rateLimiting:
-        windowMs: 60000
-        max: 1000
-      helmet:
-        enabled: true
-      jwt:
-        expiresIn: '24h'
-    
-    observability:
-      tracing:
-        enabled: true
-        serviceName: 'orchestrator-nest'
-      metrics:
-        enabled: true
-        prefix: 'n8n_work_orchestrator_'
-      logging:
-        level: 'info'
-        structured: true
-    
-    features:
-      multiTenancy:
-        enabled: true
-      webhooks:
-        enabled: true
-        maxSize: '10MB'
-      marketplace:
-        enabled: true
-        registryUrl: 'https://registry.n8n-work.com'
-
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: n8n-work-orchestrator
-  namespace: n8n-work
-  labels:
-    app: orchestrator-nest
-    component: control-plane
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: n8n-work-orchestrator
-rules:
-- apiGroups: [""]
-  resources: ["configmaps", "secrets"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: n8n-work-orchestrator
-subjects:
-- kind: ServiceAccount
-  name: n8n-work-orchestrator
-  namespace: n8n-work
-roleRef:
-  kind: ClusterRole
-  name: n8n-work-orchestrator
-  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: engine-go
+description: N8N Work Engine - Go-based Workflow Execution Engine
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - golang
+  - workflow-engine
+  - execution
+  - grpc
+home: https://github.com/your-org/n8n-work
+sources:
+  - https://github.com/your-org/n8n-work/tree/main/engine-go
+maintainers:
+  - name: N8N Work Team
+    email: team@n8n-work.com
+
+annotations:
+  category: Workflow Engine
+  licenses: Apache-2.0

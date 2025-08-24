@@ -1,0 +1,245 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: engine-go
+  namespace: n8n-work
+  labels:
+    app: engine-go
+    component: engine
+    tier: backend
+    version: v1.0.0
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: engine-go
+  template:
+    metadata:
+      labels:
+        app: engine-go
+        component: engine
+        tier: backend
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: engine-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      containers:
+      - name: engine-go
+        image: n8n-work/engine-go:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: grpc
+          containerPort: 5001
+          protocol: TCP
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: GO_ENV
+          value: "production"
+        - name: GRPC_PORT
+          value: "5001"
+        - name: METRICS_PORT
+          value: "8080"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: url
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-credentials
+              key: url
+        - name: JAEGER_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: observability-config
+              key: jaeger-endpoint
+        - name: MAX_CONCURRENT_EXECUTIONS
+          value: "100"
+        - name: MAX_CONCURRENT_STEPS
+          value: "1000"
+        - name: DEFAULT_TIMEOUT
+          value: "300s"
+        - name: MAX_RETRIES
+          value: "3"
+        - name: RETRY_DELAY
+          value: "1s"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+            ephemeral-storage: "2Gi"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+            ephemeral-storage: "4Gi"
+        livenessProbe:
+          grpc:
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          grpc:
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          grpc:
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: app-data
+          mountPath: /app/data
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: app-data
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - engine-go
+              topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - compute-optimized
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: engine-go-service
+  namespace: n8n-work
+  labels:
+    app: engine-go
+    component: engine
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: 5001
+    targetPort: grpc
+    protocol: TCP
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: engine-go
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: engine-service-account
+  namespace: n8n-work
+  labels:
+    app: engine-go
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: engine-pdb
+  namespace: n8n-work
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: engine-go
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: engine-hpa
+  namespace: n8n-work
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: engine-go
+  minReplicas: 5
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: active_executions_per_pod
+      target:
+        type: AverageValue
+        averageValue: "50"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 20
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 5
+        periodSeconds: 60

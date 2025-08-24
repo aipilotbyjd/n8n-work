@@ -1,0 +1,146 @@
+# Development Environment Configuration
+environment: development
+
+# Reduce resource requirements for development
+orchestrator:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  ingress:
+    hosts:
+      - host: api.n8n-work.dev
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: orchestrator-dev-tls
+        hosts:
+          - api.n8n-work.dev
+
+engine-go:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+
+node-runner-js:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+  # Relaxed network policies for development
+  networkPolicy:
+    enabled: false
+
+# Lightweight database setup for development
+postgresql:
+  architecture: standalone
+  primary:
+    persistence:
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  readReplicas:
+    replicaCount: 0
+
+rabbitmq:
+  replicaCount: 1
+  clustering:
+    enabled: false
+  persistence:
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+redis:
+  architecture: standalone
+  master:
+    persistence:
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 512Mi
+      requests:
+        cpu: 125m
+        memory: 256Mi
+  replica:
+    replicaCount: 0
+
+# Simplified observability for development
+observability:
+  prometheus:
+    server:
+      persistentVolume:
+        size: 10Gi
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+  
+  grafana:
+    persistence:
+      size: 2Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 512Mi
+      requests:
+        cpu: 125m
+        memory: 256Mi
+  
+  loki:
+    persistence:
+      size: 10Gi
+
+# Disable PDBs for development
+podDisruptionBudget:
+  orchestrator:
+    enabled: false
+  engine-go:
+    enabled: false
+  node-runner-js:
+    enabled: false
+
+# Development-specific environment variables
+commonEnv:
+  - name: LOG_LEVEL
+    value: "debug"
+  - name: ENABLE_DEV_TOOLS
+    value: "true"

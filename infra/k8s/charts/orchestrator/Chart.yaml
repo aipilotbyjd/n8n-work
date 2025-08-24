@@ -1,0 +1,21 @@
+apiVersion: v2
+name: orchestrator
+description: N8N Work Orchestrator - NestJS API Gateway and Workflow Management
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - nestjs
+  - api-gateway
+  - workflow
+  - orchestrator
+home: https://github.com/your-org/n8n-work
+sources:
+  - https://github.com/your-org/n8n-work/tree/main/orchestrator-nest
+maintainers:
+  - name: N8N Work Team
+    email: team@n8n-work.com
+
+annotations:
+  category: API Gateway
+  licenses: Apache-2.0

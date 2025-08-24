@@ -1,0 +1,21 @@
+apiVersion: v2
+name: node-runner-js
+description: N8N Work Node Runner - Secure Sandboxed Node Execution Runtime
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - nodejs
+  - sandbox
+  - execution
+  - security
+home: https://github.com/your-org/n8n-work
+sources:
+  - https://github.com/your-org/n8n-work/tree/main/node-runner-js
+maintainers:
+  - name: N8N Work Team
+    email: team@n8n-work.com
+
+annotations:
+  category: Runtime
+  licenses: Apache-2.0

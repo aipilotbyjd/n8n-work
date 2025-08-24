@@ -1,0 +1,171 @@
+# Staging Environment Configuration
+environment: staging
+
+# Moderate scaling for staging
+orchestrator:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 750m
+      memory: 768Mi
+    requests:
+      cpu: 375m
+      memory: 384Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+  ingress:
+    hosts:
+      - host: api-staging.n8n-work.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: orchestrator-staging-tls
+        hosts:
+          - api-staging.n8n-work.com
+
+engine-go:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 1500m
+      memory: 1.5Gi
+    requests:
+      cpu: 750m
+      memory: 768Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+  nodeSelector: {}
+  tolerations: []
+
+node-runner-js:
+  replicaCount: 5
+  resources:
+    limits:
+      cpu: 750m
+      memory: 768Mi
+    requests:
+      cpu: 375m
+      memory: 384Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 25
+  nodeSelector: {}
+  tolerations: []
+  # Enable network policies but less restrictive
+  networkPolicy:
+    enabled: true
+
+# Production-like database but smaller
+postgresql:
+  architecture: replication
+  primary:
+    persistence:
+      size: 50Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  readReplicas:
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+rabbitmq:
+  replicaCount: 2
+  clustering:
+    enabled: true
+  persistence:
+    size: 25Gi
+  resources:
+    limits:
+      cpu: 750m
+      memory: 1.5Gi
+    requests:
+      cpu: 375m
+      memory: 768Mi
+
+redis:
+  architecture: replication
+  master:
+    persistence:
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 375m
+        memory: 768Mi
+      requests:
+        cpu: 187m
+        memory: 384Mi
+  replica:
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 187m
+        memory: 384Mi
+      requests:
+        cpu: 93m
+        memory: 192Mi
+
+# Full observability for staging
+observability:
+  prometheus:
+    server:
+      persistentVolume:
+        size: 50Gi
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  
+  grafana:
+    persistence:
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 375m
+        memory: 768Mi
+      requests:
+        cpu: 187m
+        memory: 384Mi
+  
+  loki:
+    persistence:
+      size: 25Gi
+
+# Enable PDBs with lower requirements
+podDisruptionBudget:
+  orchestrator:
+    enabled: true
+    minAvailable: 1
+  engine-go:
+    enabled: true
+    minAvailable: 1
+  node-runner-js:
+    enabled: true
+    minAvailable: 2
+
+# Staging-specific environment variables
+commonEnv:
+  - name: LOG_LEVEL
+    value: "info"
+  - name: ENABLE_METRICS
+    value: "true"
+  - name: ENABLE_TRACING
+    value: "true"

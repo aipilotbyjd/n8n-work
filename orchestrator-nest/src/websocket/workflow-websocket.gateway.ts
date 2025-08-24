@@ -16,6 +16,7 @@ import { WorkflowService } from '../workflow/workflow.service';
 import { ExecutionService } from '../execution/execution.service';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { JwtService } from '@nestjs/jwt';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -72,6 +73,7 @@ export class WorkflowWebSocketGateway
     private readonly workflowService: WorkflowService,
     private readonly executionService: ExecutionService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly jwtService: JwtService,
   ) {}
 
   afterInit(server: Server) {

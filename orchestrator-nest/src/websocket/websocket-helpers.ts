@@ -4,9 +4,10 @@
 
   private async validateToken(token: string): Promise<{ userId: string; tenantId: string } | null> {
     try {
-      // This should integrate with your actual JWT validation service
-      // For now, we'll use a placeholder implementation
-      const decoded = await this.verifyJWT(token);
+      // Use the injected JWT service for token validation
+      const decoded = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET || 'default-secret',
+      });
       
       if (!decoded || !decoded.sub || !decoded.tenantId) {
         return null;
@@ -23,17 +24,9 @@
   }
 
   private async verifyJWT(token: string): Promise<any> {
-    // Use actual JWT service for verification
-    try {
-      // This would use your actual JWT service
-      const jwtService = new (await import('@nestjs/jwt')).JwtService({
-        secret: process.env.JWT_SECRET || 'default-secret',
-      });
-      
-      return jwtService.verify(token);
-    } catch (error) {
-      throw new Error('Invalid token');
-    }
+    // This method is now deprecated as we're using the injected JwtService directly
+    // But keeping it for backward compatibility
+    return this.validateToken(token);
   }
 
   private isValidSubscriptionType(type: string): boolean {

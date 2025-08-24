@@ -76,9 +76,38 @@ export class AuditLogService {
       endDate?: Date;
     },
   ): Promise<AuditLogEntry[]> {
-    // Mock implementation - return empty array until we have the entity set up
-    this.logger.warn('getAuditLogs not implemented - returning empty array');
-    return [];
+    try {
+      const queryBuilder = this.auditLogRepository.createQueryBuilder('audit_log')
+        .where('audit_log.tenantId = :tenantId', { tenantId });
+
+      if (filters?.userId) {
+        queryBuilder.andWhere('audit_log.userId = :userId', { userId: filters.userId });
+      }
+
+      if (filters?.resourceType) {
+        queryBuilder.andWhere('audit_log.resourceType = :resourceType', { resourceType: filters.resourceType });
+      }
+
+      if (filters?.action) {
+        queryBuilder.andWhere('audit_log.action = :action', { action: filters.action });
+      }
+
+      if (filters?.startDate) {
+        queryBuilder.andWhere('audit_log.timestamp >= :startDate', { startDate: filters.startDate });
+      }
+
+      if (filters?.endDate) {
+        queryBuilder.andWhere('audit_log.timestamp <= :endDate', { endDate: filters.endDate });
+      }
+
+      queryBuilder.orderBy('audit_log.timestamp', 'DESC');
+
+      const results = await queryBuilder.getMany();
+      return results;
+    } catch (error) {
+      this.logger.error('Failed to retrieve audit logs:', error);
+      throw error;
+    }
   }
 
   async logWorkflowCreated(

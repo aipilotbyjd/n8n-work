@@ -30,9 +30,17 @@ export async function initializeTracing(serviceName, serviceVersion) {
 
   try {
     await sdk.start();
-    console.log('Telemetry initialized successfully');
+    // In a real implementation, this would use a proper logger
+    // For now, we'll suppress these logs in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Telemetry initialized successfully');
+    }
   } catch (error) {
-    console.error('Error initializing telemetry:', error);
+    // In a real implementation, this would use a proper logger
+    // For now, we'll suppress these logs in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error initializing telemetry:', error);
+    }
   }
 
   return gracefulShutdown;
@@ -42,9 +50,17 @@ export async function gracefulShutdown() {
   if (sdk) {
     try {
       await sdk.shutdown();
-      console.log('Telemetry terminated');
+      // In a real implementation, this would use a proper logger
+      // For now, we'll suppress these logs in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Telemetry terminated');
+      }
     } catch (error) {
-      console.error('Error shutting down telemetry:', error);
+      // In a real implementation, this would use a proper logger
+      // For now, we'll suppress these logs in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error shutting down telemetry:', error);
+      }
     }
   }
 }

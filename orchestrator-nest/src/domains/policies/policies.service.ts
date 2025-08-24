@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Policy } from './entities/policy.entity';
 import { PolicyAssignment, AssigneeType } from './entities/policy-assignment.entity';
@@ -312,7 +312,7 @@ export class PoliciesService {
     const userAssignments = await this.policyAssignmentRepository.find({
       where: [
         { assigneeType: 'user', assigneeId: userId, tenantId },
-        // TODO: Add role-based assignments when roles are implemented
+        { assigneeType: 'role', assigneeId: In(await this.getUserRoles(userId, tenantId)), tenantId },
       ],
       relations: ['policy'],
     });
@@ -359,6 +359,16 @@ export class PoliciesService {
     });
 
     return { allowed, reason, appliedPolicies };
+  }
+
+  /**
+   * Get roles assigned to a user
+   * In a real implementation, this would query a roles/permissions service
+   */
+  private async getUserRoles(userId: string, tenantId: string): Promise<string[]> {
+    // Mock implementation - in a real system, this would query a roles database
+    // For now, we'll return an empty array since roles aren't fully implemented
+    return [];
   }
 
   /**

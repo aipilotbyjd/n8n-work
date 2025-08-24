@@ -1,8 +1,12 @@
 package invoker
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/n8n-work/engine-go/internal/config"
@@ -144,22 +148,113 @@ func (s *Service) ProcessStepExecution(ctx context.Context, message []byte) erro
 
 // callNodeRunner calls the appropriate node runner service
 func (s *Service) callNodeRunner(req *executionv1.StepExecRequest) (*executionv1.StepExecResponse, error) {
-	// Implementation would determine which node runner to call based on node type
-	// and make the gRPC/HTTP call
+	// Implementation determines which node runner to call based on node type
+	// and makes the gRPC/HTTP call
 	
-	// For now, return a mock response
-	return &executionv1.StepExecResponse{
-		TenantId:   req.TenantId,
-		RunId:      req.RunId,
-		StepId:     req.StepId,
-		Success:    true,
-		OutputJson: []byte(`{"result": "success"}`),
-	}, nil
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// For now, we'll make a simple HTTP call to a node runner
+	// In a production implementation, this would be more sophisticated
+	// with load balancing, retries, circuit breakers, etc.
+	
+	// Build the request
+	url := fmt.Sprintf("http://localhost:3002/execute") // Default node runner URL
+	
+	// Marshal the request to JSON
+	requestData, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
+	}
+	
+	// Create HTTP request
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(requestData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	
+	// Make the request
+	httpResp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call node runner: %v", err)
+	}
+	defer httpResp.Body.Close()
+	
+	// Read response
+	respBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %v", err)
+	}
+	
+	// Check status code
+	if httpResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("node runner returned status %d: %s", httpResp.StatusCode, string(respBody))
+	}
+	
+	// Parse response
+	var resp executionv1.StepExecResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+	
+	return &resp, nil
 }
 
 // publishResult publishes the execution result to the result queue
 func (s *Service) publishResult(result *executionv1.StepExecResponse) error {
-	// Implementation would publish the result to a result queue
+	// Implementation publishes the result to a result queue
 	// for the orchestrator to consume
+	
+	// Marshal the result to protobuf
+	data, err := proto.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("failed to marshal result: %v", err)
+	}
+	
+	// Connect to RabbitMQ
+	conn, err := amqp.Dial(s.config.RabbitMQURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to RabbitMQ: %v", err)
+	}
+	defer conn.Close()
+	
+	// Open a channel
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("failed to open RabbitMQ channel: %v", err)
+	}
+	defer ch.Close()
+	
+	// Declare the results queue
+	q, err := ch.QueueDeclare(
+		"step_results", // name
+		true,          // durable
+		false,         // delete when unused
+		false,         // exclusive
+		false,         // no-wait
+		nil,           // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare results queue: %v", err)
+	}
+	
+	// Publish the message
+	err = ch.Publish(
+		"",     // exchange
+		q.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			ContentType: "application/protobuf",
+			Body:        data,
+		})
+	if err != nil {
+		return fmt.Errorf("failed to publish result: %v", err)
+	}
+	
+	s.logger.Info("Successfully published result", zap.String("run_id", result.RunId), zap.String("step_id", result.StepId))
 	return nil
 }

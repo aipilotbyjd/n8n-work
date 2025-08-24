@@ -3,6 +3,9 @@ import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-grpc';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { createLogger } from '../logging/logger';
+
+const logger = createLogger('tracing');
 
 let sdk: NodeSDK | null = null;
 let isInitialized = false;
@@ -12,7 +15,7 @@ export async function initializeTracing(
   serviceVersion: string
 ): Promise<() => Promise<void>> {
   if (isInitialized) {
-    console.warn('OpenTelemetry already initialized');
+    logger.warn('OpenTelemetry already initialized');
     return gracefulShutdown;
   }
 
@@ -21,7 +24,7 @@ export async function initializeTracing(
     const enableTracing = process.env.OTEL_ENABLE_TRACING !== 'false';
 
     if (!enableTracing) {
-      console.log('OpenTelemetry tracing is disabled');
+      logger.info('OpenTelemetry tracing is disabled');
       return async () => {};
     }
 
@@ -71,13 +74,13 @@ export async function initializeTracing(
     sdk.start();
     isInitialized = true;
 
-    console.log(`OpenTelemetry initialized successfully for ${serviceName}`);
-    console.log(`Exporting traces to: ${otlpEndpoint}`);
+    logger.info(`OpenTelemetry initialized successfully for ${serviceName}`);
+    logger.info(`Exporting traces to: ${otlpEndpoint}`);
 
     return gracefulShutdown;
 
   } catch (error) {
-    console.error('Failed to initialize OpenTelemetry:', error);
+    logger.error('Failed to initialize OpenTelemetry:', error);
     throw error;
   }
 }
@@ -86,9 +89,9 @@ export async function gracefulShutdown(): Promise<void> {
   if (sdk) {
     try {
       await sdk.shutdown();
-      console.log('OpenTelemetry shut down successfully');
+      logger.info('OpenTelemetry shut down successfully');
     } catch (error) {
-      console.error('Error shutting down OpenTelemetry:', error);
+      logger.error('Error shutting down OpenTelemetry:', error);
     } finally {
       sdk = null;
       isInitialized = false;

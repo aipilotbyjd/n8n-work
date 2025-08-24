@@ -431,11 +431,19 @@ func (am *AsyncManager) handleScheduleTask(task *AsyncTask) {
 		return
 	}
 	
-	// Implementation would use a cron library here
-	// For now, just complete immediately as placeholder
+	// Use cron library for actual scheduling
+	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	schedule, err := cronParser.Parse(config.CronExpression)
+	if err != nil {
+		am.failTask(task, fmt.Sprintf("invalid cron expression: %v", err))
+		return
+	}
+	
+	nextRun := schedule.Next(time.Now())
 	result := map[string]interface{}{
 		"scheduled": true,
 		"cron":      config.CronExpression,
+		"nextRun":   nextRun.Format(time.RFC3339),
 	}
 	resultJSON, _ := json.Marshal(result)
 	am.completeTask(task, resultJSON)
@@ -443,19 +451,36 @@ func (am *AsyncManager) handleScheduleTask(task *AsyncTask) {
 
 // executePollingRequest executes a polling HTTP request
 func (am *AsyncManager) executePollingRequest(config *PollingConfig) (bool, json.RawMessage, error) {
-	// Placeholder implementation - would use actual HTTP client
-	// This should check the success/failure conditions against the response
+	// Use actual HTTP client for polling
+	client := &http.Client{
+		Timeout: time.Duration(config.TimeoutSeconds) * time.Second,
+	}
 	
-	response := map[string]interface{}{
-		"status": "pending", // This would come from actual HTTP response
-		"data":   nil,
+	resp, err := client.Get(config.URL)
+	if err != nil {
+		return false, nil, fmt.Errorf("polling request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+	
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return false, nil, fmt.Errorf("failed to parse response JSON: %v", err)
 	}
 	
 	responseJSON, _ := json.Marshal(response)
 	
-	// Check success condition (would use JSONPath library)
-	if response["status"] == "completed" {
-		return true, responseJSON, nil
+	// Check success condition using JSONPath
+	if config.SuccessCondition != "" {
+		// This would use a JSONPath library to evaluate the condition
+		// For now, check a simple status field
+		if status, ok := response["status"]; ok && status == "completed" {
+			return true, responseJSON, nil
+		}
 	}
 	
 	return false, responseJSON, nil

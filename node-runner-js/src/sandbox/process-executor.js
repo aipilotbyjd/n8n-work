@@ -45,19 +45,39 @@ function createSecureProcessContext(allowedModules, allowedBuiltins) {
     // Safe globals
     console: {
       log: (...args) => {
-        console.log('[NODE]', ...args);
+        // In a real implementation, this would use a proper logger
+        // For now, we'll suppress these logs in production
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[NODE]', ...args);
+        }
       },
       error: (...args) => {
-        console.error('[NODE ERROR]', ...args);
+        // In a real implementation, this would use a proper logger
+        // For now, we'll suppress these logs in production
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[NODE ERROR]', ...args);
+        }
       },
       warn: (...args) => {
-        console.warn('[NODE WARN]', ...args);
+        // In a real implementation, this would use a proper logger
+        // For now, we'll suppress these logs in production
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[NODE WARN]', ...args);
+        }
       },
       info: (...args) => {
-        console.info('[NODE INFO]', ...args);
+        // In a real implementation, this would use a proper logger
+        // For now, we'll suppress these logs in production
+        if (process.env.NODE_ENV !== 'production') {
+          console.info('[NODE INFO]', ...args);
+        }
       },
       debug: (...args) => {
-        console.debug('[NODE DEBUG]', ...args);
+        // In a real implementation, this would use a proper logger
+        // For now, we'll suppress these logs in production
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[NODE DEBUG]', ...args);
+        }
       },
     },
     

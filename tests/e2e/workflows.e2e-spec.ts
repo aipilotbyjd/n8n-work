@@ -4,13 +4,6 @@ import * as request from 'supertest';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-// These imports would need to be adjusted based on your actual module structure
-// For now, commenting them out as they reference non-existent files
-// import { WorkflowsController } from '../../orchestrator-nest/src/domains/workflows/workflows.controller';
-// import { WorkflowsService } from '../../orchestrator-nest/src/domains/workflows/workflows.service';
-// import { Workflow } from '../../orchestrator-nest/src/domains/workflows/entities/workflow.entity';
-// import { ExecutionsService } from '../../orchestrator-nest/src/domains/executions/executions.service';
-// import { SecurityService } from '../../orchestrator-nest/src/security/security.service';
 
 // Mock Workflow entity interface
 interface Workflow {

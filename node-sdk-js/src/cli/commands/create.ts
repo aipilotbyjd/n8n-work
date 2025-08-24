@@ -135,7 +135,34 @@ export class {{className}} extends TriggerNode {
   ): Promise<INodeExecutionData[]> {
     const interval = this.getParameter<number>(data.parameters, 'interval', 5);
 
-    // TODO: Implement your polling logic here
+    // Implement your polling logic here
+    // This is a basic example that polls an API at regular intervals
+    
+    const interval = this.getParameter<number>(data.parameters, 'interval', 60); // Default 60 seconds
+    const url = this.getParameter<string>(data.parameters, 'url', '');
+    
+    this.validateRequiredParameters(data.parameters, ['url']);
+    
+    // Poll the URL
+    try {
+      const response = await axios.get(url, {
+        timeout: 10000, // 10 second timeout
+      });
+      
+      const results: INodeExecutionData[] = [
+        this.createExecutionData({
+          triggerTime: new Date().toISOString(),
+          interval,
+          source: '{{nodeName}}',
+          response: response.data,
+          statusCode: response.status,
+        }),
+      ];
+
+      return results;
+    } catch (error) {
+      throw new Error(`Polling failed: ${error.message}`);
+    }
     // This is a basic example that returns static data
     
     const results: INodeExecutionData[] = [
@@ -225,7 +252,20 @@ export class {{className}} extends TriggerNode {
     const path = this.getParameter<string>(data.parameters, 'path', '');
     const httpMethod = this.getParameter<string>(data.parameters, 'httpMethod', 'POST');
 
-    // TODO: Process webhook payload
+    // Process webhook payload
+    // This example simply passes through the webhook data
+    // You can add custom processing logic here
+    
+    const results: INodeExecutionData[] = [
+      this.createExecutionData({
+        receivedAt: new Date().toISOString(),
+        headers: context.headers,
+        body: context.payload,
+        source: '{{nodeName}}',
+      }),
+    ];
+
+    return results;
     // The webhook payload would be available in data.inputData
     
     const results: INodeExecutionData[] = [];

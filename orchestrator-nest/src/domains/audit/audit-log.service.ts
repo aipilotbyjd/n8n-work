@@ -1,44 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
-export interface AuditLogEntry {
-  id: string;
-  tenantId: string;
-  userId: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  oldValues?: any;
-  newValues?: any;
-  ipAddress: string;
-  userAgent: string;
-  timestamp: Date;
-}
+import { AuditLogEntry } from './audit-log.entity';
 
 @Injectable()
 export class AuditLogService {
   private readonly logger = new Logger(AuditLogService.name);
 
   constructor(
-    // @InjectRepository(AuditLogEntry)
-    // private readonly auditLogRepository: Repository<AuditLogEntry>,
+    @InjectRepository(AuditLogEntry)
+    private readonly auditLogRepository: Repository<AuditLogEntry>,
   ) {}
 
   async log(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): Promise<void> {
     try {
-      // For now, just log to console until we have the entity set up
-      this.logger.log('Audit Log Entry:', {
+      const auditEntry = this.auditLogRepository.create({
         ...entry,
         timestamp: new Date(),
       });
       
-      // TODO: Save to database when AuditLogEntry entity is created
-      // const auditEntry = this.auditLogRepository.create({
-      //   ...entry,
-      //   timestamp: new Date(),
-      // });
-      // await this.auditLogRepository.save(auditEntry);
+      await this.auditLogRepository.save(auditEntry);
+      this.logger.debug('Audit log entry created', { id: auditEntry.id });
     } catch (error) {
       this.logger.error('Failed to create audit log entry:', error);
     }
@@ -94,7 +76,7 @@ export class AuditLogService {
       endDate?: Date;
     },
   ): Promise<AuditLogEntry[]> {
-    // TODO: Implement when repository is available
+    // Mock implementation - return empty array until we have the entity set up
     this.logger.warn('getAuditLogs not implemented - returning empty array');
     return [];
   }

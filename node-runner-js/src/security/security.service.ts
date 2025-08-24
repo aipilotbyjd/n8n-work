@@ -245,9 +245,41 @@ export class SecurityService {
    * Setup macOS pfctl rules
    */
   private async setupMacOSFirewallRules(): Promise<void> {
-    // macOS firewall rules would go here
-    // This is a simplified example
-    this.logger.info('macOS firewall rules setup (placeholder)');
+    // macOS firewall rules using pfctl
+    try {
+      const rules = this.policy.networkPolicy.firewallRules;
+      
+      // Create temporary pf rules file
+      const rulesFile = path.join(os.tmpdir(), `n8n-work-firewall-${Date.now()}.conf`);
+      
+      let pfRules = '# N8N-Work Firewall Rules\n';
+      pfRules += 'set block-policy drop\n';
+      pfRules += 'set skip on lo0\n';
+      
+      // Add allow rules
+      for (const rule of rules.filter(r => r.action === 'allow')) {
+        if (rule.destinationPort) {
+          pfRules += `pass out proto tcp from any to any port ${rule.destinationPort}\n`;
+        }
+        if (rule.destinationIP) {
+          pfRules += `pass out proto tcp from any to ${rule.destinationIP}\n`;
+        }
+      }
+      
+      // Add block rules
+      pfRules += 'block out all\n';
+      
+      await fs.writeFile(rulesFile, pfRules);
+      
+      // Apply rules
+      await execAsync(`pfctl -f ${rulesFile}`);
+      await execAsync('pfctl -e');
+      
+      this.logger.info({ rulesCount: rules.length }, 'macOS firewall rules applied');
+    } catch (error) {
+      this.logger.error({ error: error.message }, 'Failed to setup macOS firewall rules');
+      throw error;
+    }
   }
 
   /**

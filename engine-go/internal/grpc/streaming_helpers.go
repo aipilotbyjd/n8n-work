@@ -257,31 +257,31 @@ func (s *StreamingService) collectCurrentMetrics(tenantID, executionID string) *
 
 // getHistoricalLogs retrieves historical logs for an execution
 func (s *StreamingService) getHistoricalLogs(executionID, stepID string, tailLines int32) []*pb.LogEvent {
-	// This would typically query a log storage system
-	// For now, we'll return a placeholder implementation
-	logs := make([]*pb.LogEvent, 0)
-
-	// Mock some historical logs
-	if tailLines > 0 {
-		for i := int32(0); i < tailLines && i < 10; i++ {
-			log := &pb.LogEvent{
-				Timestamp:   time.Now().Add(-time.Duration(i)*time.Minute).Format(time.RFC3339),
-				ExecutionId: executionID,
-				StepId:      stepID,
-				Level:       pb.LogLevel_INFO,
-				Message:     fmt.Sprintf("Historical log entry %d", i+1),
-				Fields: map[string]string{
-					"type": "historical",
-					"line": fmt.Sprintf("%d", i+1),
-				},
-				Source:  "engine-go",
-				TraceId: fmt.Sprintf("trace-%s-%d", executionID, i),
-			}
-			logs = append(logs, log)
-		}
+	// Query log storage system for historical logs
+	logs, err := s.repo.GetExecutionLogs(context.Background(), executionID, stepID, int(tailLines))
+	if err != nil {
+		s.logger.Error("Failed to retrieve historical logs",
+			zap.String("execution_id", executionID),
+			zap.String("step_id", stepID),
+			zap.Error(err))
+		return make([]*pb.LogEvent, 0)
 	}
 
-	return logs
+	var pbLogs []*pb.LogEvent
+	for _, log := range logs {
+		pbLogs = append(pbLogs, &pb.LogEvent{
+			Timestamp:   log.Timestamp,
+			ExecutionId: log.ExecutionID,
+			StepId:      log.StepID,
+			Level:       pb.LogLevel(pb.LogLevel_value[log.Level]),
+			Message:     log.Message,
+			Fields:      log.Fields,
+			Source:      log.Source,
+			TraceId:     log.TraceID,
+		})
+	}
+
+	return pbLogs
 }
 
 // Event data structures for internal streaming events

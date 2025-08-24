@@ -23,23 +23,14 @@
   }
 
   private async verifyJWT(token: string): Promise<any> {
-    // Placeholder - implement actual JWT verification
-    // This should use your JWT service or library
+    // Use actual JWT service for verification
     try {
-      // Mock implementation
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new Error('Invalid token format');
-      }
-
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      // This would use your actual JWT service
+      const jwtService = new (await import('@nestjs/jwt')).JwtService({
+        secret: process.env.JWT_SECRET || 'default-secret',
+      });
       
-      // Check expiration
-      if (payload.exp && payload.exp < Date.now() / 1000) {
-        throw new Error('Token expired');
-      }
-
-      return payload;
+      return jwtService.verify(token);
     } catch (error) {
       throw new Error('Invalid token');
     }

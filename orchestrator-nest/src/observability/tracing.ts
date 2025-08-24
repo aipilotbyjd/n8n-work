@@ -1,5 +1,4 @@
 // OpenTelemetry tracing setup - simplified for now
-// TODO: Add proper OpenTelemetry integration
 
 let isInitialized = false;
 

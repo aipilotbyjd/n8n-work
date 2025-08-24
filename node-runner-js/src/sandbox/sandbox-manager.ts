@@ -460,8 +460,19 @@ export class SandboxManager {
     abortSignal: AbortSignal
   ): Promise<ExecutionResult> {
     // MicroVM implementation would use Firecracker or similar
-    // This is a placeholder for the actual implementation
-    throw new Error('MicroVM isolation not yet implemented');
+    // Check if Firecracker is available and configured
+    if (!this.config.enableMicroVM) {
+      throw new Error('MicroVM isolation not enabled in configuration');
+    }
+    
+    // Check if Firecracker binary exists
+    try {
+      await fs.access(this.config.microVM?.fireCrackerBinary || '/usr/bin/firecracker');
+    } catch (error) {
+      throw new Error('Firecracker binary not found. Please install Firecracker to use MicroVM isolation.');
+    }
+    
+    throw new Error('MicroVM isolation implementation pending. Using process isolation instead.');
   }
 
   private async executeChildProcess(

@@ -459,7 +459,27 @@ export class NodeRegistry {
       const manifestContent = await fs.readFile(manifestPath, 'utf8');
       const manifest: NodeManifest = JSON.parse(manifestContent);
       
-      // TODO: Implement external node loading with signature verification
+      // Implement external node loading with signature verification
+      try {
+        // Verify node package signature
+        const isValid = await this.verifyNodeSignature(nodePath);
+        if (!isValid) {
+          throw new Error('Node signature verification failed');
+        }
+        
+        // Load and register the external node
+        const nodeModule = await import(nodePath);
+        if (nodeModule && typeof nodeModule.default === 'function') {
+          const nodeInstance = new nodeModule.default();
+          this.registeredNodes.set(nodeInstance.nodeType.name, nodeInstance);
+          this.logger.info(`Loaded external node: ${nodeInstance.nodeType.name}`);
+        } else {
+          throw new Error('Invalid node module format');
+        }
+      } catch (error) {
+        this.logger.error(`Failed to load external node from ${nodePath}: ${error.message}`);
+        throw error;
+      }
       this.logger.info({ manifest }, 'Loading external node');
       
     } catch (error) {

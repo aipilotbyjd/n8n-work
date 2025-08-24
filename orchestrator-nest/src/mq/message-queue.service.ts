@@ -9,16 +9,22 @@ export class MessageQueueService {
 
   async publishWorkflowExecution(workflowExecution: any): Promise<void> {
     this.logger.log('Publishing workflow execution', { id: workflowExecution.id });
-    // TODO: Implement RabbitMQ publishing
+    // Implementation would connect to RabbitMQ and publish message
+    // For now, just log the action
+    this.logger.debug('Workflow execution message:', workflowExecution);
   }
 
   async publishStepExecution(stepExecution: any): Promise<void> {
     this.logger.log('Publishing step execution', { id: stepExecution.id });
-    // TODO: Implement RabbitMQ publishing
+    // Implementation would connect to RabbitMQ and publish message
+    // For now, just log the action
+    this.logger.debug('Step execution message:', stepExecution);
   }
 
   async publishEvent(event: any): Promise<void> {
     this.logger.log('Publishing event', { type: event.type });
-    // TODO: Implement event publishing
+    // Implementation would connect to RabbitMQ and publish message
+    // For now, just log the action
+    this.logger.debug('Event message:', event);
   }
 }

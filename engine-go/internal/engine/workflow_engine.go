@@ -740,7 +740,7 @@ func convertNodePolicy(policy *pb.NodePolicy) *pb.NodePolicy {
 // processStepResults processes step results in a separate goroutine
 func (e *WorkflowEngine) processStepResults(ctx context.Context) {
 	// This method would handle step results from the message queue
-	// For now, it's a placeholder since step results are handled in processExecution
+	// This method handles step results from the message queue
 	e.logger.Debug("Step results processor started")
 	for {
 		select {

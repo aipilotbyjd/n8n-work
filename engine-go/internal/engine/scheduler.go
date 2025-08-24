@@ -299,9 +299,41 @@ func (s *Scheduler) executeWorkflow(ctx context.Context, scheduled *ScheduledExe
 	executionCtx, cancel := context.WithTimeout(ctx, scheduled.Timeout)
 	defer cancel()
 	
-	// TODO: Integrate with workflow engine to actually execute the workflow
-	// For now, simulate execution
-	time.Sleep(100 * time.Millisecond)
+	// Integrate with workflow engine to actually execute the workflow
+	result, err := s.engine.ExecuteWorkflow(executionCtx, &pb.ExecuteWorkflowRequest{
+		WorkflowId: scheduled.WorkflowID,
+		TenantId:   scheduled.TenantID,
+		RunId:      scheduled.ExecutionID,
+		Inputs:     scheduled.Inputs,
+	})
+	
+	if err != nil {
+		s.logger.Error("Workflow execution failed",
+			zap.String("execution_id", scheduled.ExecutionID),
+			zap.Error(err),
+		)
+		
+		scheduled.mu.Lock()
+		scheduled.Status = ScheduleStatusFailed
+		scheduled.mu.Unlock()
+		return
+	}
+	
+	// Process execution result
+	if !result.Success {
+		s.logger.Warn("Workflow execution unsuccessful",
+			zap.String("execution_id", scheduled.ExecutionID),
+			zap.String("error", result.ErrorMessage),
+		)
+		
+		scheduled.mu.Lock()
+		scheduled.Status = ScheduleStatusFailed
+		scheduled.mu.Unlock()
+	} else {
+		s.logger.Info("Workflow execution successful",
+			zap.String("execution_id", scheduled.ExecutionID),
+		)
+	}
 	
 	// Mark as completed
 	scheduled.mu.Lock()

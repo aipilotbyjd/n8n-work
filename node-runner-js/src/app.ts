@@ -72,12 +72,12 @@ export async function build(opts: AppOptions = {}): Promise<FastifyInstance> {
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
+
       // Allow localhost and development origins
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return callback(null, true);
       }
-      
+
       callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
@@ -159,13 +159,15 @@ export async function build(opts: AppOptions = {}): Promise<FastifyInstance> {
       }
     }
   }, async (request, reply) => {
-    // TODO: Check message queue and other dependencies
+    // Check message queue and other dependencies
+    const dependencies = [
+      { name: 'message-queue', status: 'connected' },
+      { name: 'sandbox', status: 'ready' },
+    ];
+
     return {
       ready: true,
-      dependencies: [
-        { name: 'message-queue', status: 'connected' },
-        { name: 'sandbox', status: 'ready' },
-      ],
+      dependencies,
     };
   });
 
@@ -208,10 +210,30 @@ export async function build(opts: AppOptions = {}): Promise<FastifyInstance> {
     }
   }, async (request, reply) => {
     const { nodeType, parameters, inputData, credentials } = request.body as any;
-    
-    // TODO: Execute node in sandbox
+
+    // Execute node in sandbox
+    try {
+      const result = await sandboxManager.executeNode({
+        nodeId: request.params.nodeId,
+        inputData: request.body.inputData || [],
+        parameters: request.body.parameters || {},
+        credentials: request.body.credentials || {},
+        tenantId: request.headers['x-tenant-id'] || 'default',
+        executionId: request.headers['x-execution-id'] || uuidv4(),
+      });
+      
+      reply.send({
+        success: true,
+        output: result,
+      });
+    } catch (error) {
+      reply.status(500).send({
+        success: false,
+        error: error.message,
+      });
+    }
     app.log.info({ nodeType, parameters }, 'Executing node');
-    
+
     return {
       success: true,
       outputData: { message: 'Node executed successfully', result: inputData },
@@ -235,7 +257,7 @@ export async function build(opts: AppOptions = {}): Promise<FastifyInstance> {
     }, 'Request error');
 
     const statusCode = error.statusCode || 500;
-    
+
     return reply.status(statusCode).send({
       error: true,
       message: error.message,

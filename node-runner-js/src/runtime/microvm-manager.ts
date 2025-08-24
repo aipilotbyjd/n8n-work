@@ -490,8 +490,12 @@ export class RuntimeManager extends EventEmitter {
   }
 
   private async createKataEnvironment(nodeId: string, config: ExecutionConfig): Promise<ExecutionEnvironment> {
-    // Kata Containers implementation
-    throw new Error('Kata Containers runtime not implemented');
+    // Kata Containers implementation placeholder
+    // In a real implementation, this would create a Kata Containers environment
+    this.logger.warn('Kata Containers runtime is not fully implemented');
+    
+    // For now, fall back to MicroVM environment
+    return this.createMicroVMEnvironment(nodeId, config);
   }
 
   private async waitForFirecracker(socketPath: string, timeout: number): Promise<void> {

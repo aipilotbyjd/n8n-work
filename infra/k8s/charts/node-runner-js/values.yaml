@@ -1,0 +1,94 @@
+# Default values for node-runner-js
+replicaCount: 1
+
+image:
+  repository: n8n-work/node-runner-js
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 3002
+  targetPort: 3002
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Security-specific configurations for sandbox execution
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false  # Sandbox needs write access
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - NET_BIND_SERVICE
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsGroup: 1000
+  runAsUser: 1000
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: PORT
+    value: "3002"
+  - name: SANDBOX_ISOLATION_LEVEL
+    value: "process"
+  - name: MAX_EXECUTION_TIME
+    value: "300"
+  - name: MAX_MEMORY_MB
+    value: "256"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3002
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 3002
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+persistence:
+  enabled: false
+  size: 5Gi
+  accessMode: ReadWriteOnce
+
+# Network policies for sandbox security
+networkPolicy:
+  enabled: false
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: n8n-work
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80

@@ -15,6 +15,7 @@ help:
 	@echo "  test           Run all tests"
 	@echo "  lint           Run linters for all services"
 	@echo "  format         Format all code"
+	@echo "  validate       Validate project structure"
 	@echo ""
 	@echo "  build          Build all services"
 	@echo "  docker-build   Build Docker images"
@@ -89,6 +90,16 @@ format:
 	cd orchestrator-nest && npm run format
 	cd node-runner-js && npm run format
 	cd node-sdk-js && npm run format
+
+# Structure Validation
+validate:
+	@echo "Validating project structure..."
+	node scripts/validate-structure.js
+
+# Health Check
+health:
+	@echo "Checking system health..."
+	node scripts/health-check.js
 
 # Building
 build: proto-gen

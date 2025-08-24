@@ -127,10 +127,10 @@ export class ResourceMonitor extends EventEmitter {
     this.activeMonitors.set(executionId, monitor);
     monitor.start();
 
-    this.logger.info({ 
-      executionId, 
+    this.logger.info({
+      executionId,
       quota,
-      processId 
+      processId
     }, 'Started resource monitoring');
 
     return monitor;
@@ -144,7 +144,7 @@ export class ResourceMonitor extends EventEmitter {
     if (monitor) {
       monitor.stop();
       this.activeMonitors.delete(executionId);
-      
+
       this.logger.info({ executionId }, 'Stopped resource monitoring');
     }
   }
@@ -162,11 +162,11 @@ export class ResourceMonitor extends EventEmitter {
    */
   getUsageHistory(executionId: string, since?: Date): ResourceUsage[] {
     const history = this.resourceHistory.get(executionId) || [];
-    
+
     if (since) {
       return history.filter(usage => new Date(usage.timestamp) >= since);
     }
-    
+
     return history;
   }
 
@@ -175,11 +175,11 @@ export class ResourceMonitor extends EventEmitter {
    */
   getAlerts(executionId: string, type?: string): ResourceAlert[] {
     const alerts = this.alerts.get(executionId) || [];
-    
+
     if (type) {
       return alerts.filter(alert => alert.type === type);
     }
-    
+
     return alerts;
   }
 
@@ -227,7 +227,7 @@ export class ResourceMonitor extends EventEmitter {
   } {
     const totalAlerts = Array.from(this.alerts.values())
       .reduce((sum, alerts) => sum + alerts.length, 0);
-    
+
     const criticalAlerts = Array.from(this.alerts.values())
       .reduce((sum, alerts) => sum + alerts.filter(a => a.type === 'critical').length, 0);
 
@@ -285,10 +285,10 @@ export class ResourceMonitor extends EventEmitter {
 
     // Clean up old usage history
     for (const [executionId, history] of this.resourceHistory) {
-      const filteredHistory = history.filter(usage => 
+      const filteredHistory = history.filter(usage =>
         new Date(usage.timestamp) >= cutoff
       );
-      
+
       if (filteredHistory.length === 0) {
         this.resourceHistory.delete(executionId);
       } else {
@@ -298,10 +298,10 @@ export class ResourceMonitor extends EventEmitter {
 
     // Clean up old alerts
     for (const [executionId, alerts] of this.alerts) {
-      const filteredAlerts = alerts.filter(alert => 
+      const filteredAlerts = alerts.filter(alert =>
         new Date(alert.timestamp) >= cutoff
       );
-      
+
       if (filteredAlerts.length === 0) {
         this.alerts.delete(executionId);
       } else {
@@ -335,13 +335,13 @@ export class ResourceMonitor extends EventEmitter {
   private recordUsage(executionId: string, usage: ResourceUsage): void {
     const history = this.resourceHistory.get(executionId) || [];
     history.push(usage);
-    
+
     // Keep only recent history to prevent memory issues
     const maxHistorySize = Math.ceil(this.config.historicalDataRetentionHours * 3600 * 1000 / this.config.samplingIntervalMs);
     if (history.length > maxHistorySize) {
       history.splice(0, history.length - maxHistorySize);
     }
-    
+
     this.resourceHistory.set(executionId, history);
   }
 
@@ -377,7 +377,7 @@ export class ResourceMonitor extends EventEmitter {
 
     for (const check of checks) {
       const percentageUsed = (check.current / check.limit) * 100;
-      
+
       if (percentageUsed >= 100) {
         violations.push({
           id: `viol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -522,9 +522,9 @@ export class ResourceMonitorInstance extends EventEmitter {
   private currentUsage: ResourceUsage | null = null;
 
   constructor(
-    executionId: string, 
-    quota: ResourceQuota, 
-    logger: Logger, 
+    executionId: string,
+    quota: ResourceQuota,
+    logger: Logger,
     config: MonitoringConfig,
     processId?: number
   ) {
@@ -578,15 +578,15 @@ export class ResourceMonitorInstance extends EventEmitter {
       } else {
         await execAsync(`kill -9 -${this.processId}`); // Kill process group
       }
-      
-      this.logger.info({ 
-        executionId: this.executionId, 
-        processId: this.processId 
+
+      this.logger.info({
+        executionId: this.executionId,
+        processId: this.processId
       }, 'Process terminated due to resource limit violation');
     } catch (error) {
-      this.logger.error({ 
-        error: error.message, 
-        processId: this.processId 
+      this.logger.error({
+        error: error.message,
+        processId: this.processId
       }, 'Failed to terminate process');
     }
   }
@@ -646,7 +646,7 @@ export class ResourceMonitorInstance extends EventEmitter {
     } catch (error) {
       // Process might have ended
     }
-    
+
     return 0;
   }
 
@@ -665,7 +665,7 @@ export class ResourceMonitorInstance extends EventEmitter {
     } catch (error) {
       // Process might have ended
     }
-    
+
     return 0;
   }
 
@@ -713,7 +713,7 @@ export class ResourceMonitorInstance extends EventEmitter {
     } catch (error) {
       return 0;
     }
-    
+
     return 0;
   }
 }

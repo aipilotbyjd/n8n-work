@@ -29,4 +29,4 @@ import { AuditModule } from '../audit/audit.module';
     ScheduleValidationService,
   ],
 })
-export class SchedulingModule {}"
+export class SchedulingModule {}

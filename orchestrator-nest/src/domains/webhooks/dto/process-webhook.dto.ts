@@ -32,4 +32,4 @@ export class ProcessWebhookDto {
   @IsOptional()
   @IsObject()
   query?: Record<string, any>;
-}"
+}

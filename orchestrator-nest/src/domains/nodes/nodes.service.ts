@@ -399,12 +399,12 @@ export class NodesService {
       ratingCount: node.ratingCount || 0,
       // Add execution statistics from execution service
       // This would call the execution service to get real statistics
-      node.executionStats = {
+      executionStats: {
         totalExecutions: Math.floor(Math.random() * 1000),
         successRate: Math.random() * 100,
         avgExecutionTime: Math.floor(Math.random() * 5000),
         lastExecuted: new Date(),
-      };
+      },
     };
   }
 

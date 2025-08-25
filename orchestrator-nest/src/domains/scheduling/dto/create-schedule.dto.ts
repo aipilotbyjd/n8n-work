@@ -108,4 +108,4 @@ export class CreateScheduleDto {
   @IsOptional()
   @IsObject()
   configuration?: any;
-}"
+}

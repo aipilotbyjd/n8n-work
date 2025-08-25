@@ -43,7 +43,7 @@ import { ScheduleFilterDto } from './dto/schedule-filter.dto';
 @UseGuards(JwtAuthGuard, TenantGuard)
 @ApiBearerAuth('JWT-auth')
 export class SchedulingController {
-  constructor(private readonly schedulingService: SchedulingService) {}
+  constructor(private readonly schedulingService: SchedulingService) { }
 
   @Post()
   @ApiOperation({
@@ -328,4 +328,4 @@ export class SchedulingController {
       body.timezone,
     );
   }
-}"
+}

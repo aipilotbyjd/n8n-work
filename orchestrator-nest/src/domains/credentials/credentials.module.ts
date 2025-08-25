@@ -10,33 +10,9 @@ import { CredentialValidationService } from './services/credential-validation.se
 import { Credential } from './entities/credential.entity';
 import { CredentialType } from './entities/credential-type.entity';
 import { AuditModule } from '../audit/audit.module';
-
-@Module({
-  imports: [
-    TypeOrmModule.forFeature([Credential, CredentialType]),
-    EventEmitterModule,
-    AuditModule,
-  ],
-  controllers: [CredentialsController],
-  providers: [
-    CredentialsService,
-    CredentialsRepository,
-    CredentialEncryptionService,
-    OAuthService,
-    CredentialValidationService,
-  ],
-  exports: [
-    CredentialsService,
-    CredentialEncryptionService,
-    OAuthService,
-    CredentialValidationService,
-  ],
-})
-export class CredentialsModule {}
 import { OAuthToken } from './entities/oauth-token.entity';
 import { TenantsModule } from '../tenants/tenants.module';
 import { ObservabilityModule } from '../../observability/observability.module';
-import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -48,6 +24,7 @@ import { AuditModule } from '../audit/audit.module';
     TenantsModule,
     ObservabilityModule,
     AuditModule,
+    EventEmitterModule,
   ],
   controllers: [CredentialsController],
   providers: [

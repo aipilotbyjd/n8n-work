@@ -24,7 +24,7 @@ export class WebhooksService {
     private readonly eventEmitter: EventEmitter2,
     private readonly configService: ConfigService,
     private readonly auditService: AuditLogService,
-  ) {}
+  ) { }
 
   async create(
     createWebhookDto: CreateWebhookDto,
@@ -33,12 +33,319 @@ export class WebhooksService {
   ): Promise<WebhookResponseDto> {
     this.logger.log(`Creating webhook for workflow ${createWebhookDto.workflowId}`);
 
-    // Generate unique webhook path
     const webhookPath = this.generateWebhookPath();
     const webhookUrl = this.buildWebhookUrl(webhookPath);
-
-    // Generate webhook secret for authentication
     const secret = this.generateWebhookSecret();
 
     const webhook = this.webhookRepository.create({
-      ...createWebhookDto,\n      tenantId,\n      createdBy: userId,\n      path: webhookPath,\n      url: webhookUrl,\n      secret,\n      status: WebhookStatus.ACTIVE,\n    });\n\n    const savedWebhook = await this.webhookRepository.save(webhook);\n\n    // Emit webhook created event\n    this.eventEmitter.emit('webhook.created', {\n      webhook: savedWebhook,\n      tenantId,\n      userId,\n    });\n\n    // Log audit event\n    await this.auditService.log({\n      action: 'webhook.created',\n      resourceType: 'webhook',\n      resourceId: savedWebhook.id,\n      tenantId,\n      userId,\n      ipAddress: 'unknown',\n      userAgent: 'unknown',\n      newValues: {\n        workflowId: savedWebhook.workflowId,\n        path: savedWebhook.path,\n      },\n    });\n\n    return this.toResponseDto(savedWebhook);\n  }\n\n  async findAll(tenantId: string): Promise<WebhookResponseDto[]> {\n    const webhooks = await this.webhookRepository.find({\n      where: { tenantId },\n      relations: ['createdBy', 'updatedBy'],\n      order: { createdAt: 'DESC' },\n    });\n\n    return webhooks.map(webhook => this.toResponseDto(webhook));\n  }\n\n  async findOne(id: string, tenantId: string): Promise<WebhookResponseDto> {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n    return this.toResponseDto(webhook);\n  }\n\n  async findByPath(path: string): Promise<Webhook> {\n    const webhook = await this.webhookRepository.findOne({\n      where: { path, status: WebhookStatus.ACTIVE },\n      relations: ['workflow'],\n    });\n\n    if (!webhook) {\n      throw new NotFoundException(`Webhook with path ${path} not found`);\n    }\n\n    return webhook;\n  }\n\n  async update(\n    id: string,\n    updateWebhookDto: UpdateWebhookDto,\n    tenantId: string,\n    userId: string,\n  ): Promise<WebhookResponseDto> {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n\n    // If authentication settings changed, regenerate secret\n    if (updateWebhookDto.authenticationType && \n        updateWebhookDto.authenticationType !== webhook.authenticationType) {\n      webhook.secret = this.generateWebhookSecret();\n    }\n\n    Object.assign(webhook, updateWebhookDto, {\n      updatedBy: userId,\n    });\n\n    const savedWebhook = await this.webhookRepository.save(webhook);\n\n    // Emit webhook updated event\n    this.eventEmitter.emit('webhook.updated', {\n      webhook: savedWebhook,\n      tenantId,\n      userId,\n    });\n\n    // Log audit event\n    await this.auditService.log({\n      action: 'webhook.updated',\n      resourceType: 'webhook',\n      resourceId: id,\n      tenantId,\n      userId,\n      ipAddress: 'unknown',\n      userAgent: 'unknown',\n      newValues: updateWebhookDto,\n    });\n\n    return this.toResponseDto(savedWebhook);\n  }\n\n  async remove(id: string, tenantId: string, userId: string): Promise<void> {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n\n    await this.webhookRepository.remove(webhook);\n\n    // Emit webhook deleted event\n    this.eventEmitter.emit('webhook.deleted', {\n      webhookId: id,\n      tenantId,\n      userId,\n    });\n\n    // Log audit event\n    await this.auditService.log({\n      action: 'webhook.deleted',\n      resourceType: 'webhook',\n      resourceId: id,\n      tenantId,\n      userId,\n      ipAddress: 'unknown',\n      userAgent: 'unknown',\n      oldValues: {\n        workflowId: webhook.workflowId,\n        path: webhook.path,\n      },\n    });\n  }\n\n  async processWebhook(\n    path: string,\n    processDto: ProcessWebhookDto,\n    headers: Record<string, string>,\n    ipAddress: string,\n  ): Promise<{ success: boolean; executionId?: string; message: string }> {\n    try {\n      const webhook = await this.findByPath(path);\n\n      // Validate webhook is active\n      if (webhook.status !== WebhookStatus.ACTIVE) {\n        throw new BadRequestException('Webhook is not active');\n      }\n\n      // Check rate limiting\n      if (webhook.rateLimitPerMinute) {\n        const canProceed = await this.checkRateLimit(webhook.id, webhook.rateLimitPerMinute);\n        if (!canProceed) {\n          throw new BadRequestException('Rate limit exceeded');\n        }\n      }\n\n      // Authenticate request\n      const isAuthenticated = await this.authenticateRequest(\n        webhook,\n        processDto,\n        headers,\n      );\n\n      if (!isAuthenticated) {\n        throw new BadRequestException('Authentication failed');\n      }\n\n      // Create webhook execution record\n      const execution = this.executionRepository.create({\n        webhookId: webhook.id,\n        tenantId: webhook.tenantId,\n        requestHeaders: headers,\n        requestBody: processDto.body,\n        requestMethod: processDto.method,\n        ipAddress,\n        status: ExecutionStatus.PROCESSING,\n      });\n\n      const savedExecution = await this.executionRepository.save(execution);\n\n      // Update webhook statistics\n      webhook.requestCount = (webhook.requestCount || 0) + 1;\n      webhook.lastTriggeredAt = new Date();\n      await this.webhookRepository.save(webhook);\n\n      // Emit webhook triggered event\n      this.eventEmitter.emit('webhook.triggered', {\n        webhook,\n        execution: savedExecution,\n        data: processDto.body,\n        headers,\n      });\n\n      return {\n        success: true,\n        executionId: savedExecution.id,\n        message: 'Webhook processed successfully',\n      };\n    } catch (error) {\n      this.logger.error(`Webhook processing failed for path ${path}:`, error);\n      \n      return {\n        success: false,\n        message: error.message || 'Webhook processing failed',\n      };\n    }\n  }\n\n  async testWebhook(id: string, tenantId: string): Promise<{\n    success: boolean;\n    message: string;\n    response?: any;\n  }> {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n\n    try {\n      // Send test payload to webhook\n      const testPayload = {\n        test: true,\n        timestamp: new Date().toISOString(),\n        webhookId: webhook.id,\n      };\n\n      const result = await this.processWebhook(\n        webhook.path,\n        {\n          method: 'POST',\n          body: testPayload,\n        },\n        {\n          'content-type': 'application/json',\n          'user-agent': 'webhook-test',\n        },\n        '127.0.0.1',\n      );\n\n      return {\n        success: result.success,\n        message: result.message,\n        response: result,\n      };\n    } catch (error) {\n      return {\n        success: false,\n        message: error.message || 'Webhook test failed',\n      };\n    }\n  }\n\n  async getWebhookExecutions(\n    id: string,\n    tenantId: string,\n    limit = 50,\n    offset = 0,\n  ): Promise<WebhookExecution[]> {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n\n    return this.executionRepository.find({\n      where: { webhookId: webhook.id },\n      order: { createdAt: 'DESC' },\n      take: limit,\n      skip: offset,\n    });\n  }\n\n  async getWebhookStats(id: string, tenantId: string, days = 30) {\n    const webhook = await this.getWebhookEntity(id, tenantId);\n    const startDate = new Date();\n    startDate.setDate(startDate.getDate() - days);\n\n    const executions = await this.executionRepository\n      .createQueryBuilder('execution')\n      .where('execution.webhookId = :webhookId', { webhookId: id })\n      .andWhere('execution.createdAt >= :startDate', { startDate })\n      .getMany();\n\n    const totalExecutions = executions.length;\n    const successfulExecutions = executions.filter(\n      e => e.status === ExecutionStatus.SUCCESS,\n    ).length;\n    const failedExecutions = executions.filter(\n      e => e.status === ExecutionStatus.FAILED,\n    ).length;\n\n    const avgResponseTime = executions\n      .filter(e => e.responseTime)\n      .reduce((sum, e) => sum + e.responseTime, 0) / executions.length || 0;\n\n    return {\n      webhook: {\n        id: webhook.id,\n        path: webhook.path,\n        status: webhook.status,\n      },\n      period: { days, startDate },\n      executions: {\n        total: totalExecutions,\n        successful: successfulExecutions,\n        failed: failedExecutions,\n        successRate: totalExecutions > 0 ? successfulExecutions / totalExecutions : 0,\n      },\n      performance: {\n        avgResponseTime: Math.round(avgResponseTime),\n      },\n      usage: {\n        totalRequests: webhook.requestCount || 0,\n        lastTriggered: webhook.lastTriggeredAt,\n      },\n    };\n  }\n\n  private async getWebhookEntity(id: string, tenantId: string): Promise<Webhook> {\n    const webhook = await this.webhookRepository.findOne({\n      where: { id, tenantId },\n      relations: ['createdBy', 'updatedBy'],\n    });\n\n    if (!webhook) {\n      throw new NotFoundException(`Webhook ${id} not found`);\n    }\n\n    return webhook;\n  }\n\n  private generateWebhookPath(): string {\n    return crypto.randomBytes(16).toString('hex');\n  }\n\n  private generateWebhookSecret(): string {\n    return crypto.randomBytes(32).toString('hex');\n  }\n\n  private buildWebhookUrl(path: string): string {\n    const baseUrl = this.configService.get<string>('WEBHOOK_BASE_URL') || 'http://localhost:3000';\n    return `${baseUrl}/webhooks/${path}`;\n  }\n\n  private async checkRateLimit(webhookId: string, limitPerMinute: number): Promise<boolean> {\n    // Implementation would check Redis or in-memory cache for rate limiting\n    // For now, just return true\n    return true;\n  }\n\n  private async authenticateRequest(\n    webhook: Webhook,\n    processDto: ProcessWebhookDto,\n    headers: Record<string, string>,\n  ): Promise<boolean> {\n    switch (webhook.authenticationType) {\n      case AuthenticationType.NONE:\n        return true;\n\n      case AuthenticationType.HEADER:\n        const expectedHeader = webhook.authenticationData?.headerName;\n        const expectedValue = webhook.authenticationData?.headerValue;\n        return headers[expectedHeader?.toLowerCase()] === expectedValue;\n\n      case AuthenticationType.SIGNATURE:\n        return this.validateSignature(\n          processDto.body,\n          headers['x-signature'] || headers['x-hub-signature-256'],\n          webhook.secret,\n        );\n\n      case AuthenticationType.BASIC:\n        const authHeader = headers['authorization'];\n        if (!authHeader?.startsWith('Basic ')) {\n          return false;\n        }\n        \n        const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();\n        const [username, password] = credentials.split(':');\n        \n        return (\n          username === webhook.authenticationData?.username &&\n          password === webhook.authenticationData?.password\n        );\n\n      default:\n        return false;\n    }\n  }\n\n  private validateSignature(\n    payload: any,\n    signature: string,\n    secret: string,\n  ): boolean {\n    if (!signature || !secret) {\n      return false;\n    }\n\n    try {\n      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);\n      const hmac = crypto.createHmac('sha256', secret);\n      hmac.update(payloadString);\n      const expectedSignature = 'sha256=' + hmac.digest('hex');\n      \n      return crypto.timingSafeEqual(\n        Buffer.from(signature),\n        Buffer.from(expectedSignature),\n      );\n    } catch (error) {\n      this.logger.error('Signature validation error:', error);\n      return false;\n    }\n  }\n\n  private toResponseDto(webhook: Webhook): WebhookResponseDto {\n    return {\n      id: webhook.id,\n      workflowId: webhook.workflowId,\n      name: webhook.name,\n      description: webhook.description,\n      path: webhook.path,\n      url: webhook.url,\n      method: webhook.method,\n      status: webhook.status,\n      authenticationType: webhook.authenticationType,\n      rateLimitPerMinute: webhook.rateLimitPerMinute,\n      timeoutMs: webhook.timeoutMs,\n      requestCount: webhook.requestCount,\n      lastTriggeredAt: webhook.lastTriggeredAt,\n      isActive: webhook.isActive,\n      createdAt: webhook.createdAt,\n      updatedAt: webhook.updatedAt,\n      // Don't expose secret or authentication data\n    };\n  }\n}"
+      ...createWebhookDto,
+      tenantId,
+      createdBy: userId,
+      path: webhookPath,
+      url: webhookUrl,
+      secret,
+      status: WebhookStatus.ACTIVE,
+    });
+
+    const savedWebhook = await this.webhookRepository.save(webhook);
+
+    this.eventEmitter.emit('webhook.created', {
+      webhook: savedWebhook,
+      tenantId,
+      userId,
+    });
+
+    await this.auditService.log({
+      action: 'webhook.created',
+      resourceType: 'webhook',
+      resourceId: savedWebhook.id,
+      tenantId,
+      userId,
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      newValues: {
+        workflowId: savedWebhook.workflowId,
+        path: savedWebhook.path,
+      },
+    });
+
+    return this.toResponseDto(savedWebhook);
+  }
+
+  async findAll(tenantId: string): Promise<WebhookResponseDto[]> {
+    const webhooks = await this.webhookRepository.find({
+      where: { tenantId },
+      relations: ['createdBy', 'updatedBy'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return webhooks.map(webhook => this.toResponseDto(webhook));
+  }
+
+  async findOne(id: string, tenantId: string): Promise<WebhookResponseDto> {
+    const webhook = await this.getWebhookEntity(id, tenantId);
+    return this.toResponseDto(webhook);
+  }
+
+  async findByPath(path: string): Promise<Webhook> {
+    const webhook = await this.webhookRepository.findOne({
+      where: { path, status: WebhookStatus.ACTIVE },
+      relations: ['workflow'],
+    });
+
+    if (!webhook) {
+      throw new NotFoundException(`Webhook with path ${path} not found`);
+    }
+
+    return webhook;
+  }
+
+  async update(
+    id: string,
+    updateWebhookDto: UpdateWebhookDto,
+    tenantId: string,
+    userId: string,
+  ): Promise<WebhookResponseDto> {
+    const webhook = await this.getWebhookEntity(id, tenantId);
+
+    if (updateWebhookDto.authenticationType &&
+      updateWebhookDto.authenticationType !== webhook.authenticationType) {
+      webhook.secret = this.generateWebhookSecret();
+    }
+
+    Object.assign(webhook, updateWebhookDto, {
+      updatedBy: userId,
+    });
+
+    const savedWebhook = await this.webhookRepository.save(webhook);
+
+    this.eventEmitter.emit('webhook.updated', {
+      webhook: savedWebhook,
+      tenantId,
+      userId,
+    });
+
+    await this.auditService.log({
+      action: 'webhook.updated',
+      resourceType: 'webhook',
+      resourceId: id,
+      tenantId,
+      userId,
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      newValues: updateWebhookDto,
+    });
+
+    return this.toResponseDto(savedWebhook);
+  }
+
+  async remove(id: string, tenantId: string, userId: string): Promise<void> {
+    const webhook = await this.getWebhookEntity(id, tenantId);
+
+    await this.webhookRepository.remove(webhook);
+
+    this.eventEmitter.emit('webhook.deleted', {
+      webhookId: id,
+      tenantId,
+      userId,
+    });
+
+    await this.auditService.log({
+      action: 'webhook.deleted',
+      resourceType: 'webhook',
+      resourceId: id,
+      tenantId,
+      userId,
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
+      oldValues: {
+        workflowId: webhook.workflowId,
+        path: webhook.path,
+      },
+    });
+  }
+
+  async processWebhook(
+    path: string,
+    processDto: ProcessWebhookDto,
+    headers: Record<string, string>,
+    ipAddress: string,
+  ): Promise<{ success: boolean; executionId?: string; message: string }> {
+    try {
+      const webhook = await this.findByPath(path);
+
+      if (webhook.status !== WebhookStatus.ACTIVE) {
+        throw new BadRequestException('Webhook is not active');
+      }
+
+      if (webhook.rateLimitPerMinute) {
+        const canProceed = await this.checkRateLimit(webhook.id, webhook.rateLimitPerMinute);
+        if (!canProceed) {
+          throw new BadRequestException('Rate limit exceeded');
+        }
+      }
+
+      const isAuthenticated = await this.authenticateRequest(
+        webhook,
+        processDto,
+        headers,
+      );
+
+      if (!isAuthenticated) {
+        throw new BadRequestException('Authentication failed');
+      }
+
+      const execution = this.executionRepository.create({
+        webhookId: webhook.id,
+        tenantId: webhook.tenantId,
+        requestHeaders: headers,
+        requestBody: processDto.body,
+        requestMethod: processDto.method,
+        ipAddress,
+        status: ExecutionStatus.PROCESSING,
+      });
+
+      const savedExecution = await this.executionRepository.save(execution);
+
+      webhook.requestCount = (webhook.requestCount || 0) + 1;
+      webhook.lastTriggeredAt = new Date();
+      await this.webhookRepository.save(webhook);
+
+      this.eventEmitter.emit('webhook.triggered', {
+        webhook,
+        execution: savedExecution,
+        data: processDto.body,
+        headers,
+      });
+
+      return {
+        success: true,
+        executionId: savedExecution.id,
+        message: 'Webhook processed successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Webhook processing failed for path ${path}:`, error);
+
+      return {
+        success: false,
+        message: error.message || 'Webhook processing failed',
+      };
+    }
+  }
+
+  private async getWebhookEntity(id: string, tenantId: string): Promise<Webhook> {
+    const webhook = await this.webhookRepository.findOne({
+      where: { id, tenantId },
+      relations: ['createdBy', 'updatedBy'],
+    });
+
+    if (!webhook) {
+      throw new NotFoundException(`Webhook ${id} not found`);
+    }
+
+    return webhook;
+  }
+
+  private generateWebhookPath(): string {
+    return crypto.randomBytes(16).toString('hex');
+  }
+
+  private generateWebhookSecret(): string {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  private buildWebhookUrl(path: string): string {
+    const baseUrl = this.configService.get<string>('WEBHOOK_BASE_URL') || 'http://localhost:3000';
+    return `${baseUrl}/webhooks/${path}`;
+  }
+
+  private async checkRateLimit(webhookId: string, limitPerMinute: number): Promise<boolean> {
+    return true;
+  }
+
+  private async authenticateRequest(
+    webhook: Webhook,
+    processDto: ProcessWebhookDto,
+    headers: Record<string, string>,
+  ): Promise<boolean> {
+    switch (webhook.authenticationType) {
+      case AuthenticationType.NONE:
+        return true;
+
+      case AuthenticationType.HEADER:
+        const expectedHeader = webhook.authenticationData?.headerName;
+        const expectedValue = webhook.authenticationData?.headerValue;
+        return headers[expectedHeader?.toLowerCase()] === expectedValue;
+
+      case AuthenticationType.SIGNATURE:
+        return this.validateSignature(
+          processDto.body,
+          headers['x-signature'] || headers['x-hub-signature-256'],
+          webhook.secret,
+        );
+
+      case AuthenticationType.BASIC:
+        const authHeader = headers['authorization'];
+        if (!authHeader?.startsWith('Basic ')) {
+          return false;
+        }
+
+        const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
+        const [username, password] = credentials.split(':');
+
+        return (
+          username === webhook.authenticationData?.username &&
+          password === webhook.authenticationData?.password
+        );
+
+      default:
+        return false;
+    }
+  }
+
+  private validateSignature(
+    payload: any,
+    signature: string,
+    secret: string,
+  ): boolean {
+    if (!signature || !secret) {
+      return false;
+    }
+
+    try {
+      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(payloadString);
+      const expectedSignature = 'sha256=' + hmac.digest('hex');
+
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature),
+      );
+    } catch (error) {
+      this.logger.error('Signature validation error:', error);
+      return false;
+    }
+  }
+
+  private toResponseDto(webhook: Webhook): WebhookResponseDto {
+    return {
+      id: webhook.id,
+      workflowId: webhook.workflowId,
+      name: webhook.name,
+      description: webhook.description,
+      path: webhook.path,
+      url: webhook.url,
+      method: webhook.method,
+      status: webhook.status,
+      authenticationType: webhook.authenticationType,
+      rateLimitPerMinute: webhook.rateLimitPerMinute,
+      timeoutMs: webhook.timeoutMs,
+      requestCount: webhook.requestCount,
+      lastTriggeredAt: webhook.lastTriggeredAt,
+      isActive: webhook.isActive,
+      createdAt: webhook.createdAt,
+      updatedAt: webhook.updatedAt,
+    };
+  }
+}

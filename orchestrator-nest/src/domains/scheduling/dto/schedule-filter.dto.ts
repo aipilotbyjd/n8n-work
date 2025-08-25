@@ -43,4 +43,4 @@ export class ScheduleFilterDto {
   @IsNumber()
   @Min(0)
   offset?: number;
-}"
+}

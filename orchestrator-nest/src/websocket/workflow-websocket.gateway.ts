@@ -445,4 +445,35 @@ export class WorkflowWebSocketGateway
   }
 
   // Private helper methods continue in next part...
+
+  /**
+   * Broadcast a message to all subscribers of a specific resource
+   * @param subscriptionKey The subscription key to broadcast to
+   * @param message The message to broadcast
+   */
+  private async broadcastToSubscribers(subscriptionKey: string, message: any): Promise<void> {
+    const subscribers = this.subscriptions.get(subscriptionKey);
+    if (!subscribers || subscribers.size === 0) {
+      return;
+    }
+
+    // Send message to all subscribers
+    const promises: Promise<void>[] = [];
+    subscribers.forEach(clientId => {
+      const client = this.connectedClients.get(clientId);
+      if (client) {
+        promises.push(
+          new Promise<void>((resolve) => {
+            client.emit('update', message);
+            resolve();
+          })
+        );
+      }
+    });
+
+    // Wait for all messages to be sent
+    await Promise.all(promises);
+    this.metrics.messagesSent += promises.length;
+  }
+
 }

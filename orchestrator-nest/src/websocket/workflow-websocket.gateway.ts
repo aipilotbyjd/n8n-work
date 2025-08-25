@@ -52,8 +52,7 @@ interface WebSocketMessage {
 @UseFilters(WsExceptionFilter)
 @UseGuards(ThrottlerGuard)
 export class WorkflowWebSocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -74,11 +73,11 @@ export class WorkflowWebSocketGateway
     private readonly executionService: ExecutionService,
     private readonly eventEmitter: EventEmitter2,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
-    
+
     // Set up periodic cleanup and metrics reporting
     setInterval(() => this.cleanupInactiveConnections(), 300000); // 5 minutes
     setInterval(() => this.reportMetrics(), 60000); // 1 minute
@@ -88,7 +87,7 @@ export class WorkflowWebSocketGateway
     try {
       // Extract token from query parameters or headers
       const token = client.handshake.auth?.token || client.handshake.query?.token;
-      
+
       if (!token) {
         this.logger.warn(`Connection rejected: No authentication token provided`);
         client.emit('error', { message: 'Authentication token required' });
@@ -130,7 +129,7 @@ export class WorkflowWebSocketGateway
       // Send current tenant stats
       const stats = await this.getTenantStats(client.tenantId);
       client.emit('tenant_stats', stats);
-      
+
     } catch (error) {
       this.logger.error(`Connection error: ${error.message}`, error.stack);
       client.emit('error', { message: 'Connection failed' });

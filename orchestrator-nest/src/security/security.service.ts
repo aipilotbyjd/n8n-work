@@ -81,10 +81,10 @@ export class SecurityService implements OnModuleInit {
   private async initializeSecurity() {
     // Generate or retrieve master encryption key
     this.encryptionKey = await this.getMasterEncryptionKey();
-    
+
     // Setup security policies
     await this.setupSecurityPolicies();
-    
+
     // Initialize audit logging
     await this.initializeAuditLogging();
 
@@ -208,7 +208,7 @@ export class SecurityService implements OnModuleInit {
       // Generate new key if not found
       const newKey = crypto.randomBytes(32).toString('hex');
       await this.storeSecretInVault('shared/master-key', { key: newKey });
-      
+
       this.logger.log('New master encryption key generated');
       return newKey;
     } catch (error) {
@@ -239,7 +239,7 @@ export class SecurityService implements OnModuleInit {
       encrypted += cipher.final('hex');
 
       const authTag = cipher.getAuthTag();
-      
+
       return JSON.stringify({
         iv: iv.toString('hex'),
         data: encrypted,
@@ -317,13 +317,13 @@ export class SecurityService implements OnModuleInit {
     try {
       // Generate new key
       const newKey = crypto.randomBytes(32).toString('hex');
-      
+
       // Store new key with version
       const currentTime = Date.now();
       await this.storeSecretInVault(`${keyPath}/v${currentTime}`, { key: newKey });
-      
+
       // Update current key reference
-      await this.storeSecretInVault(keyPath, { 
+      await this.storeSecretInVault(keyPath, {
         key: newKey,
         version: currentTime,
         rotatedAt: new Date().toISOString(),
@@ -344,7 +344,7 @@ export class SecurityService implements OnModuleInit {
 
   private startKeyRotation() {
     const rotationInterval = this.config.get('security.keyRotationInterval', 24 * 60 * 60 * 1000); // 24 hours
-    
+
     this.keyRotationInterval = setInterval(async () => {
       try {
         await this.rotateKey('shared/master-key');
@@ -419,7 +419,7 @@ export class SecurityService implements OnModuleInit {
   async validateAPIKey(keyId: string): Promise<any> {
     try {
       const keyData = await this.getSecretFromVault(`api-keys/${keyId}`);
-      
+
       if (!keyData) {
         throw new Error('API key not found');
       }

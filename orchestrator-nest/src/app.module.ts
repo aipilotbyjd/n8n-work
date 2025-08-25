@@ -12,6 +12,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { configuration } from './config/configuration';
 import { validationSchema } from './config/validation.schema';
 import { DatabaseConfig } from './config/database.config';
+import { CacheConfig } from './config/cache.config';
 
 // Common modules
 import { ObservabilityModule } from './observability/observability.module';
@@ -100,9 +101,9 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     TerminusModule,
 
     // Cache configuration - Simple in-memory cache
-    CacheModule.register({
-      ttl: 300 * 1000, // 5 minutes in milliseconds
-      max: 100, // maximum number of items in cache
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      useClass: CacheConfig,
       isGlobal: true,
     }),
 

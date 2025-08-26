@@ -12,7 +12,7 @@ export class AuditLogService {
     private readonly auditLogRepository: Repository<AuditLogEntry>,
   ) {}
 
-  async log(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): Promise<void> {
+  async log(entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'oldValues' | 'newValues'> & { oldValues?: any; newValues?: any }): Promise<void> {
     try {
       const auditEntry = this.auditLogRepository.create({
         ...entry,

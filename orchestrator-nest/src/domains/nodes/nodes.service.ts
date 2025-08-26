@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NodeType, NodeCategory } from './entities/node-type.entity';
+import { NodeType, NodeCategory, NodeTypeEnum } from './entities/node-type.entity';
 import { NodeVersion } from './entities/node-version.entity';
 import { PluginPackage, PackageStatus } from './entities/plugin-package.entity';
 import { CreateNodeDto } from './dto/create-node.dto';
@@ -195,7 +195,8 @@ export class NodesService {
         resourceId: savedNode.id,
         tenantId,
         userId,
-        metadata: { nodeName: savedNode.name, nodeType: savedNode.nodeType },
+        ipAddress: 'unknown',
+        userAgent: 'unknown',
       });
     }
 
@@ -263,7 +264,8 @@ export class NodesService {
         resourceId: savedNode.id,
         tenantId,
         userId,
-        metadata: { nodeName: savedNode.name },
+        ipAddress: 'unknown',
+        userAgent: 'unknown',
       });
     }
 
@@ -310,7 +312,8 @@ export class NodesService {
         resourceId: id,
         tenantId,
         userId,
-        metadata: { nodeName: node.name },
+        ipAddress: 'unknown',
+        userAgent: 'unknown',
       });
     }
 

@@ -22,10 +22,10 @@ import { MonitoringService } from './monitoring.service';
 import { MetricsCollectorService } from './metrics-collector.service';
 import { AlertingService } from './alerting.service';
 import { HealthCheckService } from './health-check.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantGuard } from '../auth/guards/tenant.guard';
-import { GetCurrentUser } from '../auth/decorators/get-current-user.decorator';
-import { GetCurrentTenant } from '../auth/decorators/get-current-tenant.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../../auth/guards/tenant.guard';
+import { GetCurrentUser } from '../../auth/decorators/get-current-user.decorator';
+import { GetCurrentTenant } from '../../auth/decorators/get-current-tenant.decorator';
 
 @ApiTags('monitoring')
 @ApiBearerAuth()

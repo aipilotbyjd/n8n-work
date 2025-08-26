@@ -3,7 +3,6 @@ module github.com/n8n-work/engine-go
 go 1.21
 
 require (
-
 	// Validation
 	github.com/go-playground/validator/v10 v10.16.0
 
@@ -34,25 +33,23 @@ require (
 	// JSON handling
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
+	
+	// OpenTelemetry
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
-
-	// OpenTelemetry
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
-	go.opentelemetry.io/otel/resource v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0
-	go.opentelemetry.io/otel/sdk/trace v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
 
 	// Logging
 	go.uber.org/zap v1.26.0
 	golang.org/x/sync v0.5.0
 	golang.org/x/time v0.5.0
+	
 	// gRPC and Protocol Buffers
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
-
 )
 
 require (

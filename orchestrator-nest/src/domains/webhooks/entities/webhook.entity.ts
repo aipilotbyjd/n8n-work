@@ -32,6 +32,9 @@ export enum AuthType {
   CUSTOM = 'custom',
 }
 
+// Alias for compatibility with existing imports
+export const AuthenticationType = AuthType;
+
 @Entity('webhooks')
 @Index(['tenantId', 'isActive'])
 @Index(['workflowId', 'isActive'])

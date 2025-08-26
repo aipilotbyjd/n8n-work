@@ -11,7 +11,7 @@ import {
 import { NodeVersion } from './node-version.entity';
 import { PluginPackage } from './plugin-package.entity';
 
-export enum NodeType {
+export enum NodeTypeEnum {
   ACTION = 'action',
   TRIGGER = 'trigger',
   WEBHOOK = 'webhook',
@@ -54,10 +54,10 @@ export class NodeType {
 
   @Column({
     type: 'enum',
-    enum: NodeType,
-    default: NodeType.ACTION,
+    enum: NodeTypeEnum,
+    default: NodeTypeEnum.ACTION,
   })
-  nodeType: NodeType;
+  nodeType: NodeTypeEnum;
 
   @Column({
     type: 'enum',
@@ -137,4 +137,10 @@ export class NodeType {
 
   @Column({ default: 0 })
   ratingCount: number;
+
+  @Column('uuid', { nullable: true })
+  createdBy: string;
+
+  @Column('uuid', { nullable: true })
+  updatedBy: string;
 }

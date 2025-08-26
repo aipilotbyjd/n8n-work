@@ -8,6 +8,15 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 
+// Extend Request interface to include tenantId
+declare global {
+  namespace Express {
+    interface Request {
+      tenantId?: string;
+    }
+  }
+}
+
 @Injectable()
 export class TenantGuard implements CanActivate {
   constructor(private reflector: Reflector) {}

@@ -12,11 +12,12 @@ import { Server, Socket } from 'socket.io';
 import { Logger, UseGuards, UseFilters } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WsExceptionFilter } from '../common/filters/ws-exception.filter';
-import { WorkflowService } from '../workflow/workflow.service';
-import { ExecutionService } from '../execution/execution.service';
+import { WorkflowsService } from '../domains/workflows/workflows.service';
+import { ExecutionsService } from '../domains/executions/executions.service';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtService } from '@nestjs/jwt';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -69,8 +70,8 @@ export class WorkflowWebSocketGateway
   };
 
   constructor(
-    private readonly workflowService: WorkflowService,
-    private readonly executionService: ExecutionService,
+    private readonly workflowsService: WorkflowsService,
+    private readonly executionsService: ExecutionsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly jwtService: JwtService,
   ) { }
@@ -130,7 +131,7 @@ export class WorkflowWebSocketGateway
       const stats = await this.getTenantStats(client.tenantId);
       client.emit('tenant_stats', stats);
 
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Connection error: ${error.message}`, error.stack);
       client.emit('error', { message: 'Connection failed' });
       client.disconnect();
@@ -162,7 +163,7 @@ export class WorkflowWebSocketGateway
   }
 
   @SubscribeMessage('subscribe')
-  @Throttle(10, 60) // 10 subscriptions per minute
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 subscriptions per minute
   async handleSubscription(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: SubscriptionRequest,
@@ -222,7 +223,7 @@ export class WorkflowWebSocketGateway
       // Send initial data if available
       await this.sendInitialData(client, data);
 
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Subscription error: ${error.message}`, error.stack);
       client.emit('error', { message: 'Subscription failed' });
       this.metrics.errors++;
@@ -230,7 +231,7 @@ export class WorkflowWebSocketGateway
   }
 
   @SubscribeMessage('unsubscribe')
-  @Throttle(20, 60) // 20 unsubscriptions per minute
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 unsubscriptions per minute
   handleUnsubscription(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { subscriptionKey: string },
@@ -260,7 +261,7 @@ export class WorkflowWebSocketGateway
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Unsubscription error: ${error.message}`, error.stack);
       client.emit('error', { message: 'Unsubscription failed' });
       this.metrics.errors++;
@@ -268,13 +269,13 @@ export class WorkflowWebSocketGateway
   }
 
   @SubscribeMessage('ping')
-  @Throttle(30, 60) // 30 pings per minute
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 pings per minute
   handlePing(@ConnectedSocket() client: AuthenticatedSocket) {
     client.emit('pong', { timestamp: new Date().toISOString() });
   }
 
   @SubscribeMessage('get_status')
-  @Throttle(10, 60) // 10 status requests per minute
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 status requests per minute
   async handleGetStatus(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { executionId?: string; workflowId?: string },
@@ -289,15 +290,22 @@ export class WorkflowWebSocketGateway
 
       let status;
       if (data.executionId) {
-        status = await this.executionService.getExecutionStatus(
+        // Use getExecution method instead of getExecutionStatus
+        status = await this.executionsService.getExecution(
           data.executionId,
           client.tenantId,
         );
       } else if (data.workflowId) {
-        status = await this.workflowService.getWorkflowStatus(
-          data.workflowId,
-          client.tenantId,
-        );
+        // Create a mock user object for the findOne method
+        const mockUser: AuthUser = {
+          id: client.userId,
+          tenantId: client.tenantId,
+          email: '',
+          roles: [],
+          permissions: [],
+        };
+        // Use findOne method instead of getWorkflowStatus
+        status = await this.workflowsService.findOne(data.workflowId, mockUser);
       } else {
         status = await this.getTenantStats(client.tenantId);
       }
@@ -308,7 +316,7 @@ export class WorkflowWebSocketGateway
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Get status error: ${error.message}`, error.stack);
       client.emit('error', { message: 'Failed to get status' });
       this.metrics.errors++;
@@ -444,7 +452,7 @@ export class WorkflowWebSocketGateway
     });
   }
 
-  // Private helper methods continue in next part...
+  // Private helper methods
 
   /**
    * Broadcast a message to all subscribers of a specific resource
@@ -476,4 +484,171 @@ export class WorkflowWebSocketGateway
     this.metrics.messagesSent += promises.length;
   }
 
+  private isValidSubscriptionType(type: string): boolean {
+    return ['workflow', 'execution', 'logs', 'metrics', 'tenant_activity'].includes(type);
+  }
+
+  private generateSubscriptionKey(request: SubscriptionRequest, tenantId: string): string {
+    const { type, resourceId } = request;
+
+    switch (type) {
+      case 'workflow':
+        return resourceId ? `workflow:${tenantId}:${resourceId}` : `workflow:${tenantId}`;
+      case 'execution':
+        return resourceId ? `execution:${tenantId}:${resourceId}` : `execution:${tenantId}`;
+      case 'logs':
+        return resourceId ? `logs:${tenantId}:${resourceId}` : `logs:${tenantId}`;
+      case 'metrics':
+        return `metrics:${tenantId}`;
+      case 'tenant_activity':
+        return `tenant_activity:${tenantId}`;
+      default:
+        throw new Error(`Invalid subscription type: ${type}`);
+    }
+  }
+
+  private async checkSubscriptionPermission(
+    tenantId: string,
+    userId: string,
+    request: SubscriptionRequest,
+  ): Promise<boolean> {
+    try {
+      // Create a mock user object for service methods
+      const mockUser: AuthUser = {
+        id: userId,
+        tenantId: tenantId,
+        email: '',
+        roles: [],
+        permissions: [],
+      };
+
+      // Implement permission checking based on your authorization logic
+      // For now, we'll check basic tenant membership and resource access
+
+      switch (request.type) {
+        case 'workflow':
+          if (request.resourceId) {
+            // Check if user has access to specific workflow
+            const workflow = await this.workflowsService.findOne(request.resourceId, mockUser);
+            return workflow !== null;
+          }
+          return true; // Allow tenant-wide workflow subscriptions
+
+        case 'execution':
+          if (request.resourceId) {
+            // Check if user has access to specific execution
+            const execution = await this.executionsService.getExecution(request.resourceId, tenantId);
+            return execution !== null;
+          }
+          return true; // Allow tenant-wide execution subscriptions
+
+        case 'logs':
+        case 'metrics':
+        case 'tenant_activity':
+          return true; // Allow for authenticated users within tenant
+
+        default:
+          return false;
+      }
+    } catch (error: any) {
+      this.logger.error(`Permission check error: ${error.message}`);
+      return false;
+    }
+  }
+
+  private async sendInitialData(
+    client: AuthenticatedSocket,
+    request: SubscriptionRequest,
+  ): Promise<void> {
+    try {
+      // Create a mock user object for service methods
+      const mockUser: AuthUser = {
+        id: client.userId,
+        tenantId: client.tenantId,
+        email: '',
+        roles: [],
+        permissions: [],
+      };
+
+      switch (request.type) {
+        case 'workflow':
+          if (request.resourceId) {
+            const workflow = await this.workflowsService.findOne(
+              request.resourceId,
+              mockUser,
+            );
+            if (workflow) {
+              client.emit('initial_data', {
+                type: 'workflow',
+                data: workflow,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+          break;
+
+        case 'execution':
+          if (request.resourceId) {
+            const execution = await this.executionsService.getExecution(
+              request.resourceId,
+              client.tenantId,
+            );
+            if (execution) {
+              client.emit('initial_data', {
+                type: 'execution',
+                data: execution,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+          break;
+
+        // Add cases for other subscription types as needed
+      }
+    } catch (error: any) {
+      this.logger.error(`Initial data error: ${error.message}`);
+    }
+  }
+
+  private async getTenantStats(tenantId: string): Promise<any> {
+    // Implement tenant statistics retrieval
+    return {
+      tenantId,
+      activeWorkflows: 0,
+      runningExecutions: 0,
+      completedToday: 0,
+      failedToday: 0,
+    };
+  }
+
+  private async validateToken(token: string): Promise<{ userId: string; tenantId: string } | null> {
+    try {
+      // Use the injected JWT service for token validation
+      const decoded: any = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET || 'default-secret',
+      });
+
+      if (!decoded || !decoded.sub || !decoded.tenantId) {
+        return null;
+      }
+
+      return {
+        userId: decoded.sub,
+        tenantId: decoded.tenantId,
+      };
+    } catch (error: any) {
+      this.logger.error(`Token validation error: ${error.message}`);
+      return null;
+    }
+  }
+
+  private async cleanupInactiveConnections(): Promise<void> {
+    // Implement cleanup logic for inactive connections
+    this.logger.debug(`Active connections: ${this.connectedClients.size}`);
+  }
+
+  private async reportMetrics(): Promise<void> {
+    // Implement metrics reporting
+    this.logger.debug(`Current metrics: ${JSON.stringify(this.metrics)}`);
+  }
 }

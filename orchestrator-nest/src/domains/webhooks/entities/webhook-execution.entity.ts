@@ -20,6 +20,9 @@ export enum WebhookExecutionStatus {
   RATE_LIMITED = 'rate_limited',
 }
 
+// Alias for compatibility with existing imports
+export const ExecutionStatus = WebhookExecutionStatus;
+
 @Entity('webhook_executions')
 @Index(['webhookId', 'status'])
 @Index(['tenantId', 'createdAt'])

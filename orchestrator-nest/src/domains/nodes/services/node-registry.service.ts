@@ -17,7 +17,7 @@ export class NodeRegistryService {
     this.eventEmitter.emit('node.registered', {
       nodeId: node.id,
       nodeName: node.name,
-      nodeType: node.type,
+      nodeType: node.nodeType,
     });
   }
 

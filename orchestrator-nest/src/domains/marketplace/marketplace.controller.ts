@@ -26,10 +26,10 @@ import {
   MarketplaceItemResponseDto,
   MarketplaceSearchFiltersDto,
 } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantGuard } from '../auth/guards/tenant.guard';
-import { GetCurrentUser } from '../auth/decorators/get-current-user.decorator';
-import { GetCurrentTenant } from '../auth/decorators/get-current-tenant.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../../auth/guards/tenant.guard';
+import { GetCurrentUser } from '../../auth/decorators/get-current-user.decorator';
+import { GetCurrentTenant } from '../../auth/decorators/get-current-tenant.decorator';
 
 @ApiTags('marketplace')
 @ApiBearerAuth()

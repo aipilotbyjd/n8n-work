@@ -31,6 +31,18 @@ export const configuration = () => ({
     keyPrefix: process.env.REDIS_KEY_PREFIX || 'n8nwork:',
   },
 
+  // Cache
+  cache: {
+    driver: process.env.CACHE_DRIVER || 'memory',
+    ttl: parseInt(process.env.CACHE_TTL, 10) || 300, // 5 minutes
+    max: parseInt(process.env.CACHE_MAX, 10) || 1000, // maximum number of items in cache
+    redis: {
+      host: process.env.CACHE_REDIS_HOST || process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.CACHE_REDIS_PORT, 10) || parseInt(process.env.REDIS_PORT, 10) || 6379,
+      password: process.env.CACHE_REDIS_PASSWORD || process.env.REDIS_PASSWORD || undefined,
+    },
+  },
+
   // Message Queue (RabbitMQ)
   messageQueue: {
     url: process.env.RABBITMQ_URL || 'amqp://n8nwork:n8nwork_dev@localhost:5672',

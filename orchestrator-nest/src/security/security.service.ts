@@ -516,7 +516,7 @@ export class SecurityService implements OnModuleInit {
       permissions,
     };
 
-    return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
+    return jwt.sign(payload, secret, { expiresIn });
   }
 
   async hashPassword(password: string): Promise<string> {

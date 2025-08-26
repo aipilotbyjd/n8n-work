@@ -84,11 +84,8 @@ export class SchedulingService {
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      metadata: {
-        scheduleName: savedSchedule.name,
-        triggerType: savedSchedule.triggerType,
-        cronExpression: savedSchedule.cronExpression,
-      },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
     });
 
     // Update metrics
@@ -198,7 +195,8 @@ export class SchedulingService {
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      metadata: { scheduleName: savedSchedule.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
     });
 
     return this.toResponseDto(savedSchedule);
@@ -245,7 +243,8 @@ export class SchedulingService {
       resourceId: id,
       tenantId,
       userId,
-      metadata: { scheduleName: schedule.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
     });
 
     // Update metrics
@@ -310,7 +309,8 @@ export class SchedulingService {
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      metadata: { scheduleName: savedSchedule.name },
+      ipAddress: 'unknown',
+      userAgent: 'unknown',
     });
 
     return this.toResponseDto(savedSchedule);

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import * as cronParser from 'cron-parser';
-import * as cronValidate from 'cron-validate';
+const cronParser = require('cron-parser');
+const cronValidate = require('cron-validate');
 
 export interface CronParseResult {
   isValid: boolean;

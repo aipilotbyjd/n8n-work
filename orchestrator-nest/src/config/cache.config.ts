@@ -7,7 +7,17 @@ export class CacheConfig implements CacheOptionsFactory {
   constructor(private readonly config: ConfigService) {}
 
   async createCacheOptions(): Promise<CacheModuleOptions> {
-    const cacheConfig = this.config.get('cache');
+    const cacheConfig = this.config.get('cache') || {
+      driver: 'memory',
+      redis: {
+        host: process.env.REDIS_HOST || 'redis',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD
+      },
+      ttl: 3600, // 1 hour in seconds
+      max: 1000
+    };
+    
     if (cacheConfig.driver === 'redis') {
       try {
         const { redisStore } = await import('cache-manager-redis-yet');
@@ -19,10 +29,12 @@ export class CacheConfig implements CacheOptionsFactory {
           ttl: cacheConfig.ttl,
           max: cacheConfig.max,
         };
-      } catch (err) {
-        // redis not installed
+      } catch (error) {
+        console.warn('Redis store not available, falling back to memory cache:', error.message);
       }
     }
+    
+    // Default to memory cache
     return {
       ttl: cacheConfig.ttl,
       max: cacheConfig.max,

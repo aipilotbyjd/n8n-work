@@ -42,7 +42,7 @@ export class AiAgentsController {
     @GetCurrentUser('id') userId: string,
     @Body() createAgentDto: any,
   ) {
-    return this.aiAgentsService.createAgent(tenantId, createAgentDto, userId);
+    return this.aiAgentsService.create(createAgentDto, tenantId, userId);
   }
 
   @Get()
@@ -52,7 +52,7 @@ export class AiAgentsController {
     description: 'Returns all AI agents',
   })
   async getAgents(@GetCurrentTenant() tenantId: string) {
-    return this.aiAgentsService.getAgents(tenantId);
+    return this.aiAgentsService.findAll(tenantId);
   }
 
   @Get(':agentId')
@@ -70,7 +70,7 @@ export class AiAgentsController {
     @GetCurrentTenant() tenantId: string,
     @Param('agentId') agentId: string,
   ) {
-    return this.aiAgentsService.getAgent(tenantId, agentId);
+    return this.aiAgentsService.findOne(agentId, tenantId);
   }
 
   @Put(':agentId')
@@ -90,7 +90,7 @@ export class AiAgentsController {
     @Param('agentId') agentId: string,
     @Body() updateAgentDto: any,
   ) {
-    return this.aiAgentsService.updateAgent(tenantId, agentId, updateAgentDto, userId);
+    return this.aiAgentsService.update(agentId, updateAgentDto, tenantId, userId);
   }
 
   @Delete(':agentId')
@@ -109,7 +109,7 @@ export class AiAgentsController {
     @GetCurrentUser('id') userId: string,
     @Param('agentId') agentId: string,
   ) {
-    return this.aiAgentsService.deleteAgent(tenantId, agentId, userId);
+    return this.aiAgentsService.remove(agentId, tenantId, userId);
   }
 
   @Post(':agentId/execute')
@@ -129,7 +129,7 @@ export class AiAgentsController {
     @Param('agentId') agentId: string,
     @Body() executionData: any,
   ) {
-    return this.aiAgentsService.executeAgent(tenantId, agentId, executionData, userId);
+    return this.aiAgentsService.execute(agentId, executionData, tenantId, userId);
   }
 
   @Get(':agentId/executions')
@@ -147,7 +147,7 @@ export class AiAgentsController {
     @GetCurrentTenant() tenantId: string,
     @Param('agentId') agentId: string,
   ) {
-    return this.aiAgentsService.getAgentExecutions(tenantId, agentId);
+    return this.aiAgentsService.getExecutionsByAgent(agentId, tenantId);
   }
 
   @Get('executions/:executionId')
@@ -165,7 +165,7 @@ export class AiAgentsController {
     @GetCurrentTenant() tenantId: string,
     @Param('executionId') executionId: string,
   ) {
-    return this.aiAgentsService.getAgentExecution(tenantId, executionId);
+    return this.aiAgentsService.getExecution(executionId, tenantId);
   }
 
   @Post(':agentId/train')
@@ -179,13 +179,13 @@ export class AiAgentsController {
     status: HttpStatus.OK,
     description: 'AI agent training started',
   })
-  async trainAgent(
+  async train(
     @GetCurrentTenant() tenantId: string,
     @GetCurrentUser('id') userId: string,
     @Param('agentId') agentId: string,
     @Body() trainingData: any,
   ) {
-    return this.aiAgentsService.trainAgent(tenantId, agentId, trainingData, userId);
+    return this.aiAgentsService.train(tenantId, agentId, trainingData, userId);
   }
 
   @Get(':agentId/capabilities')
@@ -199,11 +199,11 @@ export class AiAgentsController {
     status: HttpStatus.OK,
     description: 'Returns AI agent capabilities',
   })
-  async getAgentCapabilities(
+  async getCapabilities(
     @GetCurrentTenant() tenantId: string,
     @Param('agentId') agentId: string,
   ) {
-    return this.aiAgentsService.getAgentCapabilities(tenantId, agentId);
+    return this.aiAgentsService.getCapabilities(tenantId, agentId);
   }
 
   @Get('analytics/performance')
@@ -222,11 +222,11 @@ export class AiAgentsController {
     status: HttpStatus.OK,
     description: 'Returns AI agents performance analytics',
   })
-  async getPerformanceAnalytics(
+  async getAnalytics(
     @GetCurrentTenant() tenantId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.aiAgentsService.getPerformanceAnalytics(tenantId, startDate, endDate);
+    return this.aiAgentsService.getAnalytics(tenantId, startDate, endDate);
   }
 }

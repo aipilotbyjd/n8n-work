@@ -49,7 +49,7 @@ export class AIAgentsService {
       status: AIAgentStatus.INACTIVE,
     });
 
-    const savedAgent = await this.aiAgentRepository.save(agent);
+    const savedAgent = (await this.aiAgentRepository.save(agent))[0];
 
     // Initialize the agent (load model, check health, etc.)
     try {
@@ -477,5 +477,20 @@ export class AIAgentsService {
         error,
       });
     }
+  }
+  
+  async train(tenantId: string, agentId: string, trainingData: any, userId: string): Promise<any> {
+    // TODO: implement training logic
+    return;
+  }
+
+  async getCapabilities(tenantId: string, agentId: string): Promise<any> {
+    // TODO: implement getCapabilities logic
+    return;
+  }
+
+  async getAnalytics(tenantId: string, startDate: string, endDate: string): Promise<any> {
+    // TODO: implement getAnalytics logic
+    return;
   }
 }

@@ -152,13 +152,14 @@ export class AlertingService {
     });
 
     // Log audit event
-    await this.auditLogService.log(
-      'alert.resolved',
-      'alert',
-      savedAlert.id,
+    await this.auditLogService.log({
+      action: 'alert.resolved',
+      resourceType: 'alert',
+      resourceId: savedAlert.id,
       userId,
-      { title: savedAlert.title },
-    );
+      tenantId,
+      newValues: { title: savedAlert.title },
+    });
 
     return savedAlert;
   }

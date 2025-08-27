@@ -206,7 +206,8 @@ func bindEnvVars() {
 	// Execution
 	viper.BindEnv("execution.max_concurrency", "ENGINE_CONCURRENCY")
 	viper.BindEnv("execution.default_timeout", "STEP_DEFAULT_TIMEOUT_MS")
-	viper.BindEnv("execution.max_retries", "RETRY_MAX")
+		vault.BindEnv("execution.max_retries", "RETRY_MAX")
+	vault.BindEnv("execution.node_runner_url", "NODE_RUNNER_URL")
 }
 
 func validate(cfg *Config) error {

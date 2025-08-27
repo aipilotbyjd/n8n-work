@@ -161,7 +161,7 @@ func (s *Service) callNodeRunner(req *executionv1.StepExecRequest) (*executionv1
 	// with load balancing, retries, circuit breakers, etc.
 	
 	// Build the request
-	url := fmt.Sprintf("http://localhost:3002/execute") // Default node runner URL
+	url := s.config.Execution.NodeRunnerURL
 	
 	// Marshal the request to JSON
 	requestData, err := json.Marshal(req)

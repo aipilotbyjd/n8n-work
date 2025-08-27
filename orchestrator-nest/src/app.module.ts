@@ -44,6 +44,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 // Core providers
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { ExecutionEngineModule } from './domains/execution-engine/execution-engine.module';
 
 @Module({
   imports: [
@@ -122,6 +123,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     PoliciesModule,
     BillingModule,
     AuditModule,
+    ExecutionEngineModule,
+    NestEngineModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -148,5 +151,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     SecurityService,
   ],
   exports: [SecurityService],
+})
+export class AppModule { }
+orts: [SecurityService],
 })
 export class AppModule { }

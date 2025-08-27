@@ -598,6 +598,12 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleExecutionStarted(event: StreamEvent): Promise<void> {
+    if (process.env.EXECUTION_ENGINE === 'nest') {
+      this.nestEngineService.execute(event.payload);
+    } else {
+      // TODO: Implement Go engine execution
+    }
+
     // Initialize execution state
     await this.updateExecutionState({
       executionId: event.payload.executionId,

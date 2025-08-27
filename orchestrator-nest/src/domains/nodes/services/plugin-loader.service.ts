@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PluginPackage } from '../entities/plugin-package.entity';
+import { Injectable, Logger } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { PluginPackage } from "../entities/plugin-package.entity";
 
 @Injectable()
 export class PluginLoaderService {
@@ -10,7 +10,9 @@ export class PluginLoaderService {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
   async loadPackage(pluginPackage: PluginPackage): Promise<void> {
-    this.logger.log(`Loading plugin package: ${pluginPackage.name}@${pluginPackage.version}`);
+    this.logger.log(
+      `Loading plugin package: ${pluginPackage.name}@${pluginPackage.version}`,
+    );
 
     try {
       // Validate package manifest
@@ -25,15 +27,20 @@ export class PluginLoaderService {
       // Mark as loaded
       this.loadedPackages.set(pluginPackage.id, pluginPackage);
 
-      this.eventEmitter.emit('plugin.loaded', {
+      this.eventEmitter.emit("plugin.loaded", {
         packageId: pluginPackage.id,
         packageName: pluginPackage.name,
         nodeCount: pluginPackage.manifest?.nodes?.length || 0,
       });
 
-      this.logger.log(`Successfully loaded plugin package: ${pluginPackage.name}`);
+      this.logger.log(
+        `Successfully loaded plugin package: ${pluginPackage.name}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to load plugin package ${pluginPackage.name}:`, error);
+      this.logger.error(
+        `Failed to load plugin package ${pluginPackage.name}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -41,7 +48,9 @@ export class PluginLoaderService {
   async unloadPackage(packageId: string): Promise<void> {
     const pluginPackage = this.loadedPackages.get(packageId);
     if (!pluginPackage) {
-      this.logger.warn(`Plugin package ${packageId} not found in loaded packages`);
+      this.logger.warn(
+        `Plugin package ${packageId} not found in loaded packages`,
+      );
       return;
     }
 
@@ -57,14 +66,19 @@ export class PluginLoaderService {
       // Remove from loaded packages
       this.loadedPackages.delete(packageId);
 
-      this.eventEmitter.emit('plugin.unloaded', {
+      this.eventEmitter.emit("plugin.unloaded", {
         packageId: pluginPackage.id,
         packageName: pluginPackage.name,
       });
 
-      this.logger.log(`Successfully unloaded plugin package: ${pluginPackage.name}`);
+      this.logger.log(
+        `Successfully unloaded plugin package: ${pluginPackage.name}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to unload plugin package ${pluginPackage.name}:`, error);
+      this.logger.error(
+        `Failed to unload plugin package ${pluginPackage.name}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -88,28 +102,30 @@ export class PluginLoaderService {
     }
 
     this.logger.log(`Reloading plugin package: ${pluginPackage.name}`);
-    
+
     await this.unloadPackage(packageId);
     await this.loadPackage(pluginPackage);
   }
 
-  async validatePackage(manifest: any): Promise<{ isValid: boolean; errors: string[] }> {
+  async validatePackage(
+    manifest: any,
+  ): Promise<{ isValid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
-    if (!manifest.name || typeof manifest.name !== 'string') {
-      errors.push('Package manifest must have a valid name');
+    if (!manifest.name || typeof manifest.name !== "string") {
+      errors.push("Package manifest must have a valid name");
     }
 
-    if (!manifest.version || typeof manifest.version !== 'string') {
-      errors.push('Package manifest must have a valid version');
+    if (!manifest.version || typeof manifest.version !== "string") {
+      errors.push("Package manifest must have a valid version");
     }
 
     if (!manifest.nodes || !Array.isArray(manifest.nodes)) {
-      errors.push('Package manifest must have a nodes array');
+      errors.push("Package manifest must have a nodes array");
     }
 
-    if (manifest.dependencies && typeof manifest.dependencies !== 'object') {
-      errors.push('Package dependencies must be an object');
+    if (manifest.dependencies && typeof manifest.dependencies !== "object") {
+      errors.push("Package dependencies must be an object");
     }
 
     return {
@@ -121,13 +137,17 @@ export class PluginLoaderService {
   private async validatePackageManifest(manifest: any): Promise<void> {
     const validation = await this.validatePackage(manifest);
     if (!validation.isValid) {
-      throw new Error(`Invalid package manifest: ${validation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid package manifest: ${validation.errors.join(", ")}`,
+      );
     }
   }
 
-  private async loadPackageDependencies(pluginPackage: PluginPackage): Promise<void> {
+  private async loadPackageDependencies(
+    pluginPackage: PluginPackage,
+  ): Promise<void> {
     const dependencies = pluginPackage.manifest?.dependencies || {};
-    
+
     for (const [name, version] of Object.entries(dependencies)) {
       this.logger.debug(`Loading dependency: ${name}@${version}`);
       // In a real implementation, this would resolve and load dependencies
@@ -135,9 +155,11 @@ export class PluginLoaderService {
     }
   }
 
-  private async registerPackageNodes(pluginPackage: PluginPackage): Promise<void> {
+  private async registerPackageNodes(
+    pluginPackage: PluginPackage,
+  ): Promise<void> {
     const nodes = pluginPackage.manifest?.nodes || [];
-    
+
     for (const nodeFile of nodes) {
       this.logger.debug(`Registering node from file: ${nodeFile}`);
       // In a real implementation, this would load and register the node
@@ -145,9 +167,11 @@ export class PluginLoaderService {
     }
   }
 
-  private async unregisterPackageNodes(pluginPackage: PluginPackage): Promise<void> {
+  private async unregisterPackageNodes(
+    pluginPackage: PluginPackage,
+  ): Promise<void> {
     const nodes = pluginPackage.manifest?.nodes || [];
-    
+
     for (const nodeFile of nodes) {
       this.logger.debug(`Unregistering node from file: ${nodeFile}`);
       // In a real implementation, this would unregister the node
@@ -155,9 +179,11 @@ export class PluginLoaderService {
     }
   }
 
-  private async cleanupPackageDependencies(pluginPackage: PluginPackage): Promise<void> {
+  private async cleanupPackageDependencies(
+    pluginPackage: PluginPackage,
+  ): Promise<void> {
     const dependencies = pluginPackage.manifest?.dependencies || {};
-    
+
     for (const [name, version] of Object.entries(dependencies)) {
       this.logger.debug(`Cleaning up dependency: ${name}@${version}`);
       // In a real implementation, this would clean up dependencies
@@ -172,7 +198,10 @@ export class PluginLoaderService {
     packagesByStatus: Record<string, number>;
   } {
     const packages = Array.from(this.loadedPackages.values());
-    const totalNodes = packages.reduce((sum, pkg) => sum + (pkg.manifest?.nodes?.length || 0), 0);
+    const totalNodes = packages.reduce(
+      (sum, pkg) => sum + (pkg.manifest?.nodes?.length || 0),
+      0,
+    );
 
     return {
       totalPackages: packages.length,

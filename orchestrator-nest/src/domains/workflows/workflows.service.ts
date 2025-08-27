@@ -5,25 +5,25 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, FindOptionsWhere } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject } from '@nestjs/common';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindManyOptions, FindOptionsWhere } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Cache } from "cache-manager";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Inject } from "@nestjs/common";
 
-import { Workflow, WorkflowStatus } from './entities/workflow.entity';
-import { CreateWorkflowDto } from './dto/create-workflow.dto';
-import { UpdateWorkflowDto } from './dto/update-workflow.dto';
-import { ListWorkflowsDto } from './dto/list-workflows.dto';
-import { WorkflowValidationService } from './workflow-validation.service';
-import { AuthUser } from '../auth/interfaces/auth-user.interface';
-import { TenantService } from '../tenants/tenants.service';
-import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
-import { WorkflowCompilerService } from './workflow-compiler.service';
-import { MetricsService } from '../../observability/metrics.service';
-import { AuditLogService } from '../audit/audit-log.service';
+import { Workflow, WorkflowStatus } from "./entities/workflow.entity";
+import { CreateWorkflowDto } from "./dto/create-workflow.dto";
+import { UpdateWorkflowDto } from "./dto/update-workflow.dto";
+import { ListWorkflowsDto } from "./dto/list-workflows.dto";
+import { WorkflowValidationService } from "./workflow-validation.service";
+import { AuthUser } from "../auth/interfaces/auth-user.interface";
+import { TenantService } from "../tenants/tenants.service";
+import { PaginatedResult } from "../common/interfaces/paginated-result.interface";
+import { WorkflowCompilerService } from "./workflow-compiler.service";
+import { MetricsService } from "../../observability/metrics.service";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class WorkflowsService {
@@ -68,14 +68,15 @@ export class WorkflowsService {
     }
 
     // Validate workflow definition
-    const validationResult = await this.workflowValidationService.validateWorkflow({
-      nodes: createWorkflowDto.nodes,
-      connections: createWorkflowDto.connections,
-    });
+    const validationResult =
+      await this.workflowValidationService.validateWorkflow({
+        nodes: createWorkflowDto.nodes,
+        connections: createWorkflowDto.connections,
+      });
 
     if (!validationResult.valid) {
       throw new BadRequestException({
-        message: 'Workflow validation failed',
+        message: "Workflow validation failed",
         errors: validationResult.errors,
       });
     }
@@ -95,7 +96,7 @@ export class WorkflowsService {
     await this.clearWorkflowCache(user.tenantId);
 
     // Emit workflow created event
-    this.eventEmitter.emit('workflow.created', {
+    this.eventEmitter.emit("workflow.created", {
       workflow: savedWorkflow,
       user,
     });
@@ -109,7 +110,7 @@ export class WorkflowsService {
     );
 
     // Update metrics
-    this.metricsService.incrementCounter('workflows_created_total', {
+    this.metricsService.incrementCounter("workflows_created_total", {
       tenant_id: user.tenantId,
     });
 
@@ -129,13 +130,14 @@ export class WorkflowsService {
       limit = 10,
       status,
       search,
-      sortBy = 'createdAt',
-      sortOrder = 'DESC',
+      sortBy = "createdAt",
+      sortOrder = "DESC",
     } = listWorkflowsDto;
 
     // Check cache first
     const cacheKey = `workflows:${user.tenantId}:${JSON.stringify(listWorkflowsDto)}`;
-    const cached = await this.cacheManager.get<PaginatedResult<Workflow>>(cacheKey);
+    const cached =
+      await this.cacheManager.get<PaginatedResult<Workflow>>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for workflows list: ${cacheKey}`);
       return cached;
@@ -156,7 +158,7 @@ export class WorkflowsService {
       order: {
         [sortBy]: sortOrder,
       },
-      relations: ['creator'],
+      relations: ["creator"],
     };
 
     // Add search functionality
@@ -168,7 +170,8 @@ export class WorkflowsService {
       ];
     }
 
-    const [workflows, total] = await this.workflowRepository.findAndCount(options);
+    const [workflows, total] =
+      await this.workflowRepository.findAndCount(options);
 
     const result: PaginatedResult<Workflow> = {
       items: workflows,
@@ -205,7 +208,7 @@ export class WorkflowsService {
         id,
         tenantId: user.tenantId,
       },
-      relations: ['creator', 'updater'],
+      relations: ["creator", "updater"],
     });
 
     if (!workflow) {
@@ -230,34 +233,41 @@ export class WorkflowsService {
     const workflow = await this.findOne(id, user);
 
     // Check if user has permission to update
-    if (workflow.createdBy !== user.userId && !user.permissions.includes('workflow:update')) {
-      throw new ForbiddenException('Insufficient permissions to update this workflow');
+    if (
+      workflow.createdBy !== user.userId &&
+      !user.permissions.includes("workflow:update")
+    ) {
+      throw new ForbiddenException(
+        "Insufficient permissions to update this workflow",
+      );
     }
 
     // If workflow is active, validate that changes are safe
     if (workflow.status === WorkflowStatus.ACTIVE) {
-      const hasBreakingChanges = await this.workflowValidationService.hasBreakingChanges(
-        workflow,
-        updateWorkflowDto,
-      );
+      const hasBreakingChanges =
+        await this.workflowValidationService.hasBreakingChanges(
+          workflow,
+          updateWorkflowDto,
+        );
 
       if (hasBreakingChanges) {
         throw new BadRequestException(
-          'Cannot make breaking changes to an active workflow. Please create a new version or deactivate first.',
+          "Cannot make breaking changes to an active workflow. Please create a new version or deactivate first.",
         );
       }
     }
 
     // Validate updated workflow if nodes or connections changed
     if (updateWorkflowDto.nodes || updateWorkflowDto.connections) {
-      const validationResult = await this.workflowValidationService.validateWorkflow({
-        nodes: updateWorkflowDto.nodes || workflow.nodes,
-        connections: updateWorkflowDto.connections || workflow.connections,
-      });
+      const validationResult =
+        await this.workflowValidationService.validateWorkflow({
+          nodes: updateWorkflowDto.nodes || workflow.nodes,
+          connections: updateWorkflowDto.connections || workflow.connections,
+        });
 
       if (!validationResult.valid) {
         throw new BadRequestException({
-          message: 'Updated workflow validation failed',
+          message: "Updated workflow validation failed",
           errors: validationResult.errors,
         });
       }
@@ -274,7 +284,7 @@ export class WorkflowsService {
     await this.clearWorkflowCache(user.tenantId, id);
 
     // Emit workflow updated event
-    this.eventEmitter.emit('workflow.updated', {
+    this.eventEmitter.emit("workflow.updated", {
       workflow: updatedWorkflow,
       previousVersion: workflow,
       user,
@@ -284,7 +294,7 @@ export class WorkflowsService {
     await this.auditLogService.logWorkflowEvent({
       workflowId: id,
       workflowName: updatedWorkflow.name,
-      action: 'update',
+      action: "update",
       userId: user.userId,
       tenantId: user.tenantId,
       newValues: updateWorkflowDto,
@@ -294,7 +304,7 @@ export class WorkflowsService {
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('workflows_updated_total', {
+    this.metricsService.incrementCounter("workflows_updated_total", {
       tenant_id: user.tenantId,
     });
 
@@ -309,14 +319,19 @@ export class WorkflowsService {
     const workflow = await this.findOne(id, user);
 
     // Check if user has permission to delete
-    if (workflow.createdBy !== user.userId && !user.permissions.includes('workflow:delete')) {
-      throw new ForbiddenException('Insufficient permissions to delete this workflow');
+    if (
+      workflow.createdBy !== user.userId &&
+      !user.permissions.includes("workflow:delete")
+    ) {
+      throw new ForbiddenException(
+        "Insufficient permissions to delete this workflow",
+      );
     }
 
     // Prevent deletion of active workflows
     if (workflow.status === WorkflowStatus.ACTIVE) {
       throw new BadRequestException(
-        'Cannot delete an active workflow. Please deactivate it first.',
+        "Cannot delete an active workflow. Please deactivate it first.",
       );
     }
 
@@ -324,7 +339,7 @@ export class WorkflowsService {
     const hasRecentExecutions = await this.hasRecentExecutions(id);
     if (hasRecentExecutions) {
       throw new BadRequestException(
-        'Cannot delete a workflow with executions in the last 30 days. Please archive instead.',
+        "Cannot delete a workflow with executions in the last 30 days. Please archive instead.",
       );
     }
 
@@ -334,7 +349,7 @@ export class WorkflowsService {
     await this.clearWorkflowCache(user.tenantId, id);
 
     // Emit workflow deleted event
-    this.eventEmitter.emit('workflow.deleted', {
+    this.eventEmitter.emit("workflow.deleted", {
       workflow,
       user,
     });
@@ -343,14 +358,14 @@ export class WorkflowsService {
     await this.auditLogService.logWorkflowEvent({
       workflowId: id,
       workflowName: workflow.name,
-      action: 'delete',
+      action: "delete",
       userId: user.userId,
       tenantId: user.tenantId,
       metadata: {},
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('workflows_deleted_total', {
+    this.metricsService.incrementCounter("workflows_deleted_total", {
       tenant_id: user.tenantId,
     });
 
@@ -363,24 +378,26 @@ export class WorkflowsService {
     const workflow = await this.findOne(id, user);
 
     if (workflow.status === WorkflowStatus.ACTIVE) {
-      throw new BadRequestException('Workflow is already active');
+      throw new BadRequestException("Workflow is already active");
     }
 
     // Validate workflow before activation
-    const validationResult = await this.workflowValidationService.validateWorkflow({
-      nodes: workflow.nodes,
-      connections: workflow.connections,
-    });
+    const validationResult =
+      await this.workflowValidationService.validateWorkflow({
+        nodes: workflow.nodes,
+        connections: workflow.connections,
+      });
 
     if (!validationResult.valid) {
       throw new BadRequestException({
-        message: 'Cannot activate workflow with validation errors',
+        message: "Cannot activate workflow with validation errors",
         errors: validationResult.errors,
       });
     }
 
     // Compile workflow for execution
-    const compilationResult = await this.workflowCompilerService.compile(workflow);
+    const compilationResult =
+      await this.workflowCompilerService.compile(workflow);
 
     // Update status
     workflow.status = WorkflowStatus.ACTIVE;
@@ -392,7 +409,7 @@ export class WorkflowsService {
     await this.clearWorkflowCache(user.tenantId, id);
 
     // Emit workflow activated event
-    this.eventEmitter.emit('workflow.activated', {
+    this.eventEmitter.emit("workflow.activated", {
       workflow: activatedWorkflow,
       user,
     });
@@ -401,14 +418,14 @@ export class WorkflowsService {
     await this.auditLogService.logWorkflowEvent({
       workflowId: id,
       workflowName: workflow.name,
-      action: 'activate',
+      action: "activate",
       userId: user.userId,
       tenantId: user.tenantId,
       metadata: {},
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('workflows_activated_total', {
+    this.metricsService.incrementCounter("workflows_activated_total", {
       tenant_id: user.tenantId,
     });
 
@@ -418,12 +435,14 @@ export class WorkflowsService {
   }
 
   async deactivate(id: string, user: AuthUser): Promise<Workflow> {
-    this.logger.debug(`Deactivating workflow ${id} for tenant ${user.tenantId}`);
+    this.logger.debug(
+      `Deactivating workflow ${id} for tenant ${user.tenantId}`,
+    );
 
     const workflow = await this.findOne(id, user);
 
     if (workflow.status !== WorkflowStatus.ACTIVE) {
-      throw new BadRequestException('Workflow is not currently active');
+      throw new BadRequestException("Workflow is not currently active");
     }
 
     // Update status
@@ -436,7 +455,7 @@ export class WorkflowsService {
     await this.clearWorkflowCache(user.tenantId, id);
 
     // Emit workflow deactivated event
-    this.eventEmitter.emit('workflow.deactivated', {
+    this.eventEmitter.emit("workflow.deactivated", {
       workflow: deactivatedWorkflow,
       user,
     });
@@ -445,14 +464,14 @@ export class WorkflowsService {
     await this.auditLogService.logWorkflowEvent({
       workflowId: id,
       workflowName: deactivatedWorkflow.name,
-      action: 'deactivate',
+      action: "deactivate",
       userId: user.userId,
       tenantId: user.tenantId,
       metadata: {},
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('workflows_deactivated_total', {
+    this.metricsService.incrementCounter("workflows_deactivated_total", {
       tenant_id: user.tenantId,
     });
 
@@ -469,18 +488,18 @@ export class WorkflowsService {
     }
 
     const stats = await this.workflowRepository
-      .createQueryBuilder('workflow')
+      .createQueryBuilder("workflow")
       .select([
-        'COUNT(*) as total',
-        'COUNT(CASE WHEN status = \'active\' THEN 1 END) as active',
-        'COUNT(CASE WHEN status = \'draft\' THEN 1 END) as draft',
-        'COUNT(CASE WHEN status = \'inactive\' THEN 1 END) as inactive',
-        'SUM(execution_count) as total_executions',
-        'SUM(success_count) as total_successes',
-        'SUM(failure_count) as total_failures',
-        'AVG(avg_execution_time_ms) as avg_execution_time',
+        "COUNT(*) as total",
+        "COUNT(CASE WHEN status = 'active' THEN 1 END) as active",
+        "COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft",
+        "COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactive",
+        "SUM(execution_count) as total_executions",
+        "SUM(success_count) as total_successes",
+        "SUM(failure_count) as total_failures",
+        "AVG(avg_execution_time_ms) as avg_execution_time",
       ])
-      .where('tenant_id = :tenantId', { tenantId: user.tenantId })
+      .where("tenant_id = :tenantId", { tenantId: user.tenantId })
       .getRawOne();
 
     const result = {
@@ -492,9 +511,12 @@ export class WorkflowsService {
       totalSuccesses: parseInt(stats.total_successes) || 0,
       totalFailures: parseInt(stats.total_failures) || 0,
       avgExecutionTimeMs: Math.round(parseFloat(stats.avg_execution_time) || 0),
-      successRate: stats.total_executions > 0 
-        ? Math.round((stats.total_successes / stats.total_executions) * 100 * 100) / 100
-        : 0,
+      successRate:
+        stats.total_executions > 0
+          ? Math.round(
+              (stats.total_successes / stats.total_executions) * 100 * 100,
+            ) / 100
+          : 0,
     };
 
     // Cache for 5 minutes
@@ -503,17 +525,17 @@ export class WorkflowsService {
     return result;
   }
 
-  private async clearWorkflowCache(tenantId: string, workflowId?: string): Promise<void> {
-    const keys = [
-      `workflows:${tenantId}:*`,
-      `workflow-stats:${tenantId}`,
-    ];
+  private async clearWorkflowCache(
+    tenantId: string,
+    workflowId?: string,
+  ): Promise<void> {
+    const keys = [`workflows:${tenantId}:*`, `workflow-stats:${tenantId}`];
 
     if (workflowId) {
       keys.push(`workflow:${workflowId}:${tenantId}`);
     }
 
-    await Promise.all(keys.map(key => this.cacheManager.del(key)));
+    await Promise.all(keys.map((key) => this.cacheManager.del(key)));
   }
 
   private async hasRecentExecutions(workflowId: string): Promise<boolean> {
@@ -521,10 +543,10 @@ export class WorkflowsService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const count = await this.workflowRepository
-      .createQueryBuilder('workflow')
-      .leftJoin('workflow.executions', 'execution')
-      .where('workflow.id = :workflowId', { workflowId })
-      .andWhere('execution.created_at > :date', { date: thirtyDaysAgo })
+      .createQueryBuilder("workflow")
+      .leftJoin("workflow.executions", "execution")
+      .where("workflow.id = :workflowId", { workflowId })
+      .andWhere("execution.created_at > :date", { date: thirtyDaysAgo })
       .getCount();
 
     return count > 0;

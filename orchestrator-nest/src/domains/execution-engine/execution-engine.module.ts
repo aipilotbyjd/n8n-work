@@ -1,12 +1,9 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Execution } from './entities/execution-engine.entity';
-import { ExecutionEngineController } from './execution-engine.controller';
-import { ExecutionEngineService } from './execution-engine.service';
+import { Module } from "@nestjs/common";
+import { NestEngineService } from "../nest-engine/nest-engine.service";
+import { ExecutionEngineFactory } from "./execution-engine.factory";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Execution])],
-  controllers: [ExecutionEngineController],
-  providers: [ExecutionEngineService],
+  providers: [NestEngineService, ExecutionEngineFactory],
+  exports: [ExecutionEngineFactory],
 })
 export class ExecutionEngineModule {}

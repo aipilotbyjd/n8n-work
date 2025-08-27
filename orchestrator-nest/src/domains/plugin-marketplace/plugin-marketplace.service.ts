@@ -1,19 +1,31 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, In } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ConfigService } from '@nestjs/config';
-import { Plugin, PluginStatus, PluginVisibility } from './entities/plugin.entity';
-import { PluginInstallation, InstallationStatus } from './entities/plugin-installation.entity';
-import { PluginReview } from './entities/plugin-review.entity';
-import { CreatePluginDto } from './dto/create-plugin.dto';
-import { InstallPluginDto } from './dto/install-plugin.dto';
-import { PluginFilterDto } from './dto/plugin-filter.dto';
-import { PluginSecurityService } from './services/plugin-security.service';
-import { PluginValidationService } from './services/plugin-validation.service';
-import { PluginSandboxService } from './services/plugin-sandbox.service';
-import { PluginRegistryService } from './services/plugin-registry.service';
-import { AuditService } from '../audit/audit.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindManyOptions, In } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { ConfigService } from "@nestjs/config";
+import {
+  Plugin,
+  PluginStatus,
+  PluginVisibility,
+} from "./entities/plugin.entity";
+import {
+  PluginInstallation,
+  InstallationStatus,
+} from "./entities/plugin-installation.entity";
+import { PluginReview } from "./entities/plugin-review.entity";
+import { CreatePluginDto } from "./dto/create-plugin.dto";
+import { InstallPluginDto } from "./dto/install-plugin.dto";
+import { PluginFilterDto } from "./dto/plugin-filter.dto";
+import { PluginSecurityService } from "./services/plugin-security.service";
+import { PluginValidationService } from "./services/plugin-validation.service";
+import { PluginSandboxService } from "./services/plugin-sandbox.service";
+import { PluginRegistryService } from "./services/plugin-registry.service";
+import { AuditService } from "../audit/audit.service";
 
 export interface PluginManifest {
   id: string;
@@ -29,15 +41,15 @@ export interface PluginManifest {
   homepage?: string;
   repository?: string;
   keywords: string[];
-  
+
   engine: {
-    type: 'node' | 'python' | 'docker';
+    type: "node" | "python" | "docker";
     version: string;
   };
-  
+
   dependencies: Record<string, string>;
   peerDependencies?: Record<string, string>;
-  
+
   permissions: {
     network?: string[];
     filesystem?: string[];
@@ -45,16 +57,16 @@ export interface PluginManifest {
     credentials?: boolean;
     webhooks?: boolean;
   };
-  
+
   nodes?: NodeDefinition[];
   credentials?: CredentialTypeDefinition[];
   triggers?: TriggerDefinition[];
-  
+
   configuration?: {
     schema: any;
     default: any;
   };
-  
+
   lifecycle?: {
     install?: string;
     uninstall?: string;
@@ -117,16 +129,21 @@ export class PluginMarketplaceService {
     authorId: string,
     packageFile: Buffer,
   ): Promise<Plugin> {
-    this.logger.log(`Submitting plugin: ${createPluginDto.name} by user: ${authorId}`);
+    this.logger.log(
+      `Submitting plugin: ${createPluginDto.name} by user: ${authorId}`,
+    );
 
     // Extract and validate manifest
     const manifest = await this.extractManifest(packageFile);
     await this.validationService.validateManifest(manifest);
 
     // Security scan
-    const securityReport = await this.securityService.scanPackage(packageFile, manifest);
+    const securityReport = await this.securityService.scanPackage(
+      packageFile,
+      manifest,
+    );
     if (securityReport.hasVulnerabilities) {
-      throw new BadRequestException('Plugin failed security scan', {
+      throw new BadRequestException("Plugin failed security scan", {
         cause: securityReport.vulnerabilities,
       });
     }
@@ -147,13 +164,13 @@ export class PluginMarketplaceService {
     await this.registryService.storePackage(savedPlugin.id, packageFile);
 
     await this.auditService.log({
-      action: 'plugin.submitted',
+      action: "plugin.submitted",
       userId: authorId,
       resourceId: savedPlugin.id,
       details: { name: savedPlugin.name, version: savedPlugin.version },
     });
 
-    this.eventEmitter.emit('plugin.submitted', {
+    this.eventEmitter.emit("plugin.submitted", {
       plugin: savedPlugin,
       authorId,
     });
@@ -161,11 +178,15 @@ export class PluginMarketplaceService {
     return savedPlugin;
   }
 
-  async approvePlugin(pluginId: string, reviewerId: string, notes?: string): Promise<Plugin> {
+  async approvePlugin(
+    pluginId: string,
+    reviewerId: string,
+    notes?: string,
+  ): Promise<Plugin> {
     const plugin = await this.findPluginById(pluginId);
 
     if (plugin.status !== PluginStatus.PENDING_REVIEW) {
-      throw new BadRequestException('Plugin is not pending review');
+      throw new BadRequestException("Plugin is not pending review");
     }
 
     // Final security and validation checks
@@ -180,13 +201,13 @@ export class PluginMarketplaceService {
     const savedPlugin = await this.pluginRepository.save(plugin);
 
     await this.auditService.log({
-      action: 'plugin.approved',
+      action: "plugin.approved",
       userId: reviewerId,
       resourceId: pluginId,
       details: { name: plugin.name, notes },
     });
 
-    this.eventEmitter.emit('plugin.approved', {
+    this.eventEmitter.emit("plugin.approved", {
       plugin: savedPlugin,
       reviewerId,
     });
@@ -194,7 +215,11 @@ export class PluginMarketplaceService {
     return savedPlugin;
   }
 
-  async rejectPlugin(pluginId: string, reviewerId: string, reason: string): Promise<Plugin> {
+  async rejectPlugin(
+    pluginId: string,
+    reviewerId: string,
+    reason: string,
+  ): Promise<Plugin> {
     const plugin = await this.findPluginById(pluginId);
 
     plugin.status = PluginStatus.REJECTED;
@@ -205,13 +230,13 @@ export class PluginMarketplaceService {
     const savedPlugin = await this.pluginRepository.save(plugin);
 
     await this.auditService.log({
-      action: 'plugin.rejected',
+      action: "plugin.rejected",
       userId: reviewerId,
       resourceId: pluginId,
       details: { name: plugin.name, reason },
     });
 
-    this.eventEmitter.emit('plugin.rejected', {
+    this.eventEmitter.emit("plugin.rejected", {
       plugin: savedPlugin,
       reviewerId,
       reason,
@@ -226,51 +251,58 @@ export class PluginMarketplaceService {
     total: number;
     facets: any;
   }> {
-    const queryBuilder = this.pluginRepository.createQueryBuilder('plugin')
-      .leftJoinAndSelect('plugin.author', 'author')
-      .leftJoinAndSelect('plugin.reviews', 'reviews')
-      .where('plugin.status = :status', { status: PluginStatus.PUBLISHED });
+    const queryBuilder = this.pluginRepository
+      .createQueryBuilder("plugin")
+      .leftJoinAndSelect("plugin.author", "author")
+      .leftJoinAndSelect("plugin.reviews", "reviews")
+      .where("plugin.status = :status", { status: PluginStatus.PUBLISHED });
 
     // Apply filters
     if (filters.category) {
-      queryBuilder.andWhere('plugin.category = :category', { category: filters.category });
+      queryBuilder.andWhere("plugin.category = :category", {
+        category: filters.category,
+      });
     }
 
     if (filters.tags?.length) {
-      queryBuilder.andWhere('plugin.tags && :tags', { tags: filters.tags });
+      queryBuilder.andWhere("plugin.tags && :tags", { tags: filters.tags });
     }
 
     if (filters.search) {
       queryBuilder.andWhere(
-        '(plugin.name ILIKE :search OR plugin.description ILIKE :search OR plugin.keywords ILIKE :search)',
-        { search: `%${filters.search}%` }
+        "(plugin.name ILIKE :search OR plugin.description ILIKE :search OR plugin.keywords ILIKE :search)",
+        { search: `%${filters.search}%` },
       );
     }
 
     if (filters.minRating) {
-      queryBuilder.andWhere('plugin.averageRating >= :minRating', { minRating: filters.minRating });
+      queryBuilder.andWhere("plugin.averageRating >= :minRating", {
+        minRating: filters.minRating,
+      });
     }
 
     if (filters.license) {
-      queryBuilder.andWhere('plugin.license = :license', { license: filters.license });
+      queryBuilder.andWhere("plugin.license = :license", {
+        license: filters.license,
+      });
     }
 
     // Sorting
     switch (filters.sortBy) {
-      case 'popularity':
-        queryBuilder.orderBy('plugin.downloadCount', 'DESC');
+      case "popularity":
+        queryBuilder.orderBy("plugin.downloadCount", "DESC");
         break;
-      case 'rating':
-        queryBuilder.orderBy('plugin.averageRating', 'DESC');
+      case "rating":
+        queryBuilder.orderBy("plugin.averageRating", "DESC");
         break;
-      case 'newest':
-        queryBuilder.orderBy('plugin.createdAt', 'DESC');
+      case "newest":
+        queryBuilder.orderBy("plugin.createdAt", "DESC");
         break;
-      case 'updated':
-        queryBuilder.orderBy('plugin.updatedAt', 'DESC');
+      case "updated":
+        queryBuilder.orderBy("plugin.updatedAt", "DESC");
         break;
       default:
-        queryBuilder.orderBy('plugin.downloadCount', 'DESC');
+        queryBuilder.orderBy("plugin.downloadCount", "DESC");
     }
 
     // Pagination
@@ -287,8 +319,8 @@ export class PluginMarketplaceService {
   }
 
   async getPlugin(pluginId: string, includeManifest = false): Promise<Plugin> {
-    const relations = ['author', 'reviews', 'reviews.user'];
-    
+    const relations = ["author", "reviews", "reviews.user"];
+
     const plugin = await this.pluginRepository.findOne({
       where: { id: pluginId, status: PluginStatus.PUBLISHED },
       relations,
@@ -307,12 +339,12 @@ export class PluginMarketplaceService {
 
   async getFeaturedPlugins(): Promise<Plugin[]> {
     return this.pluginRepository.find({
-      where: { 
+      where: {
         status: PluginStatus.PUBLISHED,
         featured: true,
       },
-      relations: ['author'],
-      order: { downloadCount: 'DESC' },
+      relations: ["author"],
+      order: { downloadCount: "DESC" },
       take: 12,
     });
   }
@@ -320,8 +352,8 @@ export class PluginMarketplaceService {
   async getPopularPlugins(limit = 20): Promise<Plugin[]> {
     return this.pluginRepository.find({
       where: { status: PluginStatus.PUBLISHED },
-      relations: ['author'],
-      order: { downloadCount: 'DESC' },
+      relations: ["author"],
+      order: { downloadCount: "DESC" },
       take: limit,
     });
   }
@@ -329,8 +361,8 @@ export class PluginMarketplaceService {
   async getRecentPlugins(limit = 20): Promise<Plugin[]> {
     return this.pluginRepository.find({
       where: { status: PluginStatus.PUBLISHED },
-      relations: ['author'],
-      order: { createdAt: 'DESC' },
+      relations: ["author"],
+      order: { createdAt: "DESC" },
       take: limit,
     });
   }
@@ -349,8 +381,11 @@ export class PluginMarketplaceService {
       where: { pluginId, tenantId },
     });
 
-    if (existingInstallation && existingInstallation.status === InstallationStatus.INSTALLED) {
-      throw new BadRequestException('Plugin is already installed');
+    if (
+      existingInstallation &&
+      existingInstallation.status === InstallationStatus.INSTALLED
+    ) {
+      throw new BadRequestException("Plugin is already installed");
     }
 
     // Validate dependencies
@@ -369,7 +404,8 @@ export class PluginMarketplaceService {
       status: InstallationStatus.INSTALLING,
     });
 
-    const savedInstallation = await this.installationRepository.save(installation);
+    const savedInstallation =
+      await this.installationRepository.save(installation);
 
     // Perform installation asynchronously
     this.performInstallation(plugin, savedInstallation).catch((error) => {
@@ -386,15 +422,15 @@ export class PluginMarketplaceService {
   ): Promise<void> {
     const installation = await this.installationRepository.findOne({
       where: { pluginId, tenantId },
-      relations: ['plugin'],
+      relations: ["plugin"],
     });
 
     if (!installation) {
-      throw new NotFoundException('Plugin installation not found');
+      throw new NotFoundException("Plugin installation not found");
     }
 
     if (installation.status !== InstallationStatus.INSTALLED) {
-      throw new BadRequestException('Plugin is not installed');
+      throw new BadRequestException("Plugin is not installed");
     }
 
     installation.status = InstallationStatus.UNINSTALLING;
@@ -404,7 +440,7 @@ export class PluginMarketplaceService {
       // Run uninstall lifecycle
       await this.sandboxService.runLifecycleHook(
         installation.plugin,
-        'uninstall',
+        "uninstall",
         installation.config,
       );
 
@@ -418,20 +454,19 @@ export class PluginMarketplaceService {
       await this.installationRepository.save(installation);
 
       await this.auditService.log({
-        action: 'plugin.uninstalled',
+        action: "plugin.uninstalled",
         tenantId,
         userId,
         resourceId: pluginId,
         details: { name: installation.plugin.name },
       });
 
-      this.eventEmitter.emit('plugin.uninstalled', {
+      this.eventEmitter.emit("plugin.uninstalled", {
         plugin: installation.plugin,
         installation,
         tenantId,
         userId,
       });
-
     } catch (error) {
       installation.status = InstallationStatus.ERROR;
       installation.errorMessage = error.message;
@@ -442,12 +477,12 @@ export class PluginMarketplaceService {
 
   async getInstalledPlugins(tenantId: string): Promise<PluginInstallation[]> {
     return this.installationRepository.find({
-      where: { 
+      where: {
         tenantId,
         status: InstallationStatus.INSTALLED,
       },
-      relations: ['plugin', 'plugin.author'],
-      order: { installedAt: 'DESC' },
+      relations: ["plugin", "plugin.author"],
+      order: { installedAt: "DESC" },
     });
   }
 
@@ -458,24 +493,24 @@ export class PluginMarketplaceService {
   ): Promise<PluginInstallation> {
     const installation = await this.installationRepository.findOne({
       where: { pluginId, tenantId },
-      relations: ['plugin'],
+      relations: ["plugin"],
     });
 
     if (!installation || installation.status !== InstallationStatus.INSTALLED) {
-      throw new NotFoundException('Plugin installation not found');
+      throw new NotFoundException("Plugin installation not found");
     }
 
     // Get latest version
     const latestPlugin = await this.pluginRepository.findOne({
-      where: { 
+      where: {
         name: installation.plugin.name,
         status: PluginStatus.PUBLISHED,
       },
-      order: { version: 'DESC' },
+      order: { version: "DESC" },
     });
 
     if (!latestPlugin || latestPlugin.version === installation.version) {
-      throw new BadRequestException('No update available');
+      throw new BadRequestException("No update available");
     }
 
     installation.status = InstallationStatus.UPDATING;
@@ -484,13 +519,13 @@ export class PluginMarketplaceService {
     try {
       // Perform update
       await this.performUpdate(installation, latestPlugin);
-      
+
       installation.version = latestPlugin.version;
       installation.status = InstallationStatus.INSTALLED;
       installation.updatedAt = new Date();
       await this.installationRepository.save(installation);
 
-      this.eventEmitter.emit('plugin.updated', {
+      this.eventEmitter.emit("plugin.updated", {
         plugin: latestPlugin,
         installation,
         tenantId,
@@ -498,7 +533,6 @@ export class PluginMarketplaceService {
       });
 
       return installation;
-
     } catch (error) {
       installation.status = InstallationStatus.ERROR;
       installation.errorMessage = error.message;
@@ -522,7 +556,7 @@ export class PluginMarketplaceService {
     });
 
     if (existingReview) {
-      throw new BadRequestException('User has already reviewed this plugin');
+      throw new BadRequestException("User has already reviewed this plugin");
     }
 
     const review = this.reviewRepository.create({
@@ -537,7 +571,7 @@ export class PluginMarketplaceService {
     // Update plugin average rating
     await this.updatePluginRating(pluginId);
 
-    this.eventEmitter.emit('plugin.reviewed', {
+    this.eventEmitter.emit("plugin.reviewed", {
       plugin,
       review: savedReview,
     });
@@ -549,19 +583,25 @@ export class PluginMarketplaceService {
   private async extractManifest(packageFile: Buffer): Promise<PluginManifest> {
     // Extract manifest from package file (zip, tar.gz, etc.)
     // This is a simplified implementation
-    return JSON.parse(packageFile.toString('utf8'));
+    return JSON.parse(packageFile.toString("utf8"));
   }
 
   private async calculateHash(data: Buffer): Promise<string> {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(data).digest('hex');
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(data).digest("hex");
   }
 
-  private async performFinalChecks(plugin: Plugin, packageBuffer: Buffer): Promise<void> {
+  private async performFinalChecks(
+    plugin: Plugin,
+    packageBuffer: Buffer,
+  ): Promise<void> {
     // Perform final security and validation checks before approval
-    const securityReport = await this.securityService.scanPackage(packageBuffer, plugin.manifest);
+    const securityReport = await this.securityService.scanPackage(
+      packageBuffer,
+      plugin.manifest,
+    );
     if (securityReport.hasVulnerabilities) {
-      throw new BadRequestException('Plugin failed final security scan');
+      throw new BadRequestException("Plugin failed final security scan");
     }
   }
 
@@ -574,38 +614,57 @@ export class PluginMarketplaceService {
     };
   }
 
-  private async validateDependencies(manifest: PluginManifest, tenantId: string): Promise<void> {
+  private async validateDependencies(
+    manifest: PluginManifest,
+    tenantId: string,
+  ): Promise<void> {
     for (const [name, version] of Object.entries(manifest.dependencies)) {
-      const isInstalled = await this.isDependencyInstalled(name, version, tenantId);
+      const isInstalled = await this.isDependencyInstalled(
+        name,
+        version,
+        tenantId,
+      );
       if (!isInstalled) {
         throw new BadRequestException(`Missing dependency: ${name}@${version}`);
       }
     }
   }
 
-  private async validatePermissions(manifest: PluginManifest, tenantId: string): Promise<void> {
+  private async validatePermissions(
+    manifest: PluginManifest,
+    tenantId: string,
+  ): Promise<void> {
     // Validate that tenant has required permissions for plugin
     const requiredPermissions = manifest.permissions;
     const tenantPermissions = await this.getTenantPermissions(tenantId);
-    
+
     // Check each permission type
     if (requiredPermissions.database && !tenantPermissions.allowDatabase) {
-      throw new BadRequestException('Plugin requires database access');
+      throw new BadRequestException("Plugin requires database access");
     }
-    
-    if (requiredPermissions.network?.length && !tenantPermissions.allowNetwork) {
-      throw new BadRequestException('Plugin requires network access');
+
+    if (
+      requiredPermissions.network?.length &&
+      !tenantPermissions.allowNetwork
+    ) {
+      throw new BadRequestException("Plugin requires network access");
     }
   }
 
-  private async performInstallation(plugin: Plugin, installation: PluginInstallation): Promise<void> {
+  private async performInstallation(
+    plugin: Plugin,
+    installation: PluginInstallation,
+  ): Promise<void> {
     try {
       // Download and verify package
       const packageBuffer = await this.registryService.getPackage(plugin.id);
       const manifest = plugin.manifest as PluginManifest;
 
       // Create sandbox environment
-      await this.sandboxService.createEnvironment(plugin, installation.tenantId);
+      await this.sandboxService.createEnvironment(
+        plugin,
+        installation.tenantId,
+      );
 
       // Install dependencies
       await this.sandboxService.installDependencies(manifest.dependencies);
@@ -614,7 +673,11 @@ export class PluginMarketplaceService {
       await this.sandboxService.deployPlugin(packageBuffer, manifest);
 
       // Run install lifecycle hook
-      await this.sandboxService.runLifecycleHook(plugin, 'install', installation.config);
+      await this.sandboxService.runLifecycleHook(
+        plugin,
+        "install",
+        installation.config,
+      );
 
       // Register nodes and credentials
       await this.registryService.registerPlugin(plugin, installation.tenantId);
@@ -625,21 +688,24 @@ export class PluginMarketplaceService {
       await this.installationRepository.save(installation);
 
       // Update download count
-      await this.pluginRepository.increment({ id: plugin.id }, 'downloadCount', 1);
+      await this.pluginRepository.increment(
+        { id: plugin.id },
+        "downloadCount",
+        1,
+      );
 
       await this.auditService.log({
-        action: 'plugin.installed',
+        action: "plugin.installed",
         tenantId: installation.tenantId,
         userId: installation.userId,
         resourceId: plugin.id,
         details: { name: plugin.name, version: plugin.version },
       });
 
-      this.eventEmitter.emit('plugin.installed', {
+      this.eventEmitter.emit("plugin.installed", {
         plugin,
         installation,
       });
-
     } catch (error) {
       installation.status = InstallationStatus.ERROR;
       installation.errorMessage = error.message;
@@ -658,14 +724,18 @@ export class PluginMarketplaceService {
     if (manifest.lifecycle?.upgrade) {
       await this.sandboxService.runLifecycleHook(
         newPlugin,
-        'upgrade',
+        "upgrade",
         installation.config,
       );
     }
 
     // Update plugin code in sandbox
     const packageBuffer = await this.registryService.getPackage(newPlugin.id);
-    await this.sandboxService.updatePlugin(packageBuffer, manifest, installation.tenantId);
+    await this.sandboxService.updatePlugin(
+      packageBuffer,
+      manifest,
+      installation.tenantId,
+    );
 
     // Update registry
     await this.registryService.updatePlugin(newPlugin, installation.tenantId);
@@ -676,7 +746,8 @@ export class PluginMarketplaceService {
       where: { pluginId },
     });
 
-    const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+    const averageRating =
+      reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
     const reviewCount = reviews.length;
 
     await this.pluginRepository.update(pluginId, {
@@ -688,7 +759,7 @@ export class PluginMarketplaceService {
   private async findPluginById(id: string): Promise<Plugin> {
     const plugin = await this.pluginRepository.findOne({
       where: { id },
-      relations: ['author'],
+      relations: ["author"],
     });
 
     if (!plugin) {
@@ -700,22 +771,22 @@ export class PluginMarketplaceService {
 
   private async getCategories(): Promise<string[]> {
     const result = await this.pluginRepository
-      .createQueryBuilder('plugin')
-      .select('DISTINCT plugin.category', 'category')
-      .where('plugin.status = :status', { status: PluginStatus.PUBLISHED })
+      .createQueryBuilder("plugin")
+      .select("DISTINCT plugin.category", "category")
+      .where("plugin.status = :status", { status: PluginStatus.PUBLISHED })
       .getRawMany();
 
-    return result.map(r => r.category).filter(Boolean);
+    return result.map((r) => r.category).filter(Boolean);
   }
 
   private async getLicenses(): Promise<string[]> {
     const result = await this.pluginRepository
-      .createQueryBuilder('plugin')
-      .select('DISTINCT plugin.license', 'license')
-      .where('plugin.status = :status', { status: PluginStatus.PUBLISHED })
+      .createQueryBuilder("plugin")
+      .select("DISTINCT plugin.license", "license")
+      .where("plugin.status = :status", { status: PluginStatus.PUBLISHED })
       .getRawMany();
 
-    return result.map(r => r.license).filter(Boolean);
+    return result.map((r) => r.license).filter(Boolean);
   }
 
   private async getPopularTags(): Promise<string[]> {
@@ -723,7 +794,11 @@ export class PluginMarketplaceService {
     return [];
   }
 
-  private async isDependencyInstalled(name: string, version: string, tenantId: string): Promise<boolean> {
+  private async isDependencyInstalled(
+    name: string,
+    version: string,
+    tenantId: string,
+  ): Promise<boolean> {
     // Check if dependency is installed in tenant
     return true; // Simplified implementation
   }

@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Workflow } from './entities/workflow.entity';
+import { Injectable } from "@nestjs/common";
+import { Workflow } from "./entities/workflow.entity";
 
 @Injectable()
 export class WorkflowCompilerService {
@@ -12,34 +12,37 @@ export class WorkflowCompilerService {
       connections: workflow.connections,
       settings: workflow.settings,
       compiled: true,
-      compiledAt: new Date()
+      compiledAt: new Date(),
     };
   }
 
-  validateCompiledWorkflow(compiled: any): { valid: boolean; errors: string[] } {
+  validateCompiledWorkflow(compiled: any): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (!compiled.nodes || compiled.nodes.length === 0) {
-      errors.push('Compiled workflow must have nodes');
+      errors.push("Compiled workflow must have nodes");
     }
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   async compile(workflow: any): Promise<any> {
     // Compile workflow to execution format
     const compiled = this.compileWorkflow(workflow);
-    
+
     // Validate the compiled result
     const validation = this.validateCompiledWorkflow(compiled);
-    
+
     if (!validation.valid) {
-      throw new Error(`Compilation failed: ${validation.errors.join(', ')}`);
+      throw new Error(`Compilation failed: ${validation.errors.join(", ")}`);
     }
-    
+
     return compiled;
   }
 }

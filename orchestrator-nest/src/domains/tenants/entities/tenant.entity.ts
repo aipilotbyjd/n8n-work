@@ -5,111 +5,111 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-} from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+} from "typeorm";
+import { ApiProperty } from "@nestjs/swagger";
 
 export enum TenantStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-  DELETED = 'deleted',
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  SUSPENDED = "suspended",
+  DELETED = "deleted",
 }
 
 export enum TenantPlan {
-  FREE = 'free',
-  STARTER = 'starter',
-  PROFESSIONAL = 'professional',
-  ENTERPRISE = 'enterprise',
+  FREE = "free",
+  STARTER = "starter",
+  PROFESSIONAL = "professional",
+  ENTERPRISE = "enterprise",
 }
 
-@Entity('tenants')
-@Index(['name'])
-@Index(['status'])
+@Entity("tenants")
+@Index(["name"])
+@Index(["status"])
 export class Tenant {
   @ApiProperty({
-    description: 'Unique identifier for the tenant',
-    example: 'uuid-v4',
+    description: "Unique identifier for the tenant",
+    example: "uuid-v4",
   })
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @ApiProperty({
-    description: 'Name of the tenant organization',
-    example: 'Acme Corp',
+    description: "Name of the tenant organization",
+    example: "Acme Corp",
   })
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: "varchar", length: 255 })
   @Index()
   name: string;
 
   @ApiProperty({
-    description: 'Display name for the tenant',
-    example: 'Acme Corporation',
+    description: "Display name for the tenant",
+    example: "Acme Corporation",
   })
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   displayName: string;
 
   @ApiProperty({
-    description: 'Description of the tenant',
-    example: 'Leading provider of innovative solutions',
+    description: "Description of the tenant",
+    example: "Leading provider of innovative solutions",
   })
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   description: string;
 
   @ApiProperty({
-    description: 'Current status of the tenant',
+    description: "Current status of the tenant",
     enum: TenantStatus,
     example: TenantStatus.ACTIVE,
   })
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: TenantStatus,
     default: TenantStatus.ACTIVE,
   })
   status: TenantStatus;
 
   @ApiProperty({
-    description: 'Subscription plan of the tenant',
+    description: "Subscription plan of the tenant",
     enum: TenantPlan,
     example: TenantPlan.PROFESSIONAL,
   })
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: TenantPlan,
     default: TenantPlan.FREE,
   })
   plan: TenantPlan;
 
   @ApiProperty({
-    description: 'Tenant configuration and settings',
-    type: 'object',
+    description: "Tenant configuration and settings",
+    type: "object",
   })
-  @Column({ type: 'jsonb', default: {} })
+  @Column({ type: "jsonb", default: {} })
   settings: Record<string, any>;
 
   @ApiProperty({
-    description: 'Tenant metadata and custom properties',
-    type: 'object',
+    description: "Tenant metadata and custom properties",
+    type: "object",
   })
-  @Column({ type: 'jsonb', default: {} })
+  @Column({ type: "jsonb", default: {} })
   metadata: Record<string, any>;
 
   @ApiProperty({
-    description: 'Whether the tenant is active',
+    description: "Whether the tenant is active",
     example: true,
   })
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: "boolean", default: true })
   isActive: boolean;
 
   @ApiProperty({
-    description: 'Timestamp when the tenant was created',
-    example: '2023-11-01T08:00:00Z',
+    description: "Timestamp when the tenant was created",
+    example: "2023-11-01T08:00:00Z",
   })
   @CreateDateColumn()
   createdAt: Date;
 
   @ApiProperty({
-    description: 'Timestamp when the tenant was last updated',
-    example: '2023-12-01T10:30:00Z',
+    description: "Timestamp when the tenant was last updated",
+    example: "2023-12-01T10:30:00Z",
   })
   @UpdateDateColumn()
   updatedAt: Date;

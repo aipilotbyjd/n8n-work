@@ -14,7 +14,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   ConflictException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -24,8 +24,8 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiExcludeEndpoint,
-} from '@nestjs/swagger';
-import { User, UserStatus } from './entities/user.entity';
+} from "@nestjs/swagger";
+import { User, UserStatus } from "./entities/user.entity";
 
 // DTOs for authentication operations
 class LoginDto {
@@ -75,34 +75,31 @@ class AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-  tokenType: string = 'Bearer';
+  tokenType: string = "Bearer";
   user: Partial<User>;
 }
 
-@ApiTags('Authentication')
-@Controller({ path: 'auth', version: '1' })
+@ApiTags("Authentication")
+@Controller({ path: "auth", version: "1" })
 export class AuthController {
-  constructor(
-    // Note: AuthService would need to be created
-    // private readonly authService: AuthService,
-  ) {}
+  constructor() {} // private readonly authService: AuthService, // Note: AuthService would need to be created
 
-  @Post('login')
+  @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'User login',
-    description: 'Authenticates a user and returns access and refresh tokens',
+    summary: "User login",
+    description: "Authenticates a user and returns access and refresh tokens",
   })
   @ApiBody({
     type: LoginDto,
-    description: 'Login credentials',
+    description: "Login credentials",
     examples: {
-      'email-login': {
-        summary: 'Email and password login',
+      "email-login": {
+        summary: "Email and password login",
         value: {
-          email: 'user@example.com',
-          password: 'secretPassword123',
-          tenantId: 'tenant-uuid',
+          email: "user@example.com",
+          password: "secretPassword123",
+          tenantId: "tenant-uuid",
           rememberMe: true,
         },
       },
@@ -110,274 +107,280 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Login successful',
+    description: "Login successful",
     type: AuthResponse,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials',
+    description: "Invalid credentials",
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid request data',
+    description: "Invalid request data",
   })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     // Implementation would call authService.login()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('register')
+  @Post("register")
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'User registration',
-    description: 'Registers a new user account',
+    summary: "User registration",
+    description: "Registers a new user account",
   })
   @ApiBody({
     type: RegisterDto,
-    description: 'Registration details',
+    description: "Registration details",
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'User registered successfully',
+    description: "User registered successfully",
     type: AuthResponse,
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'User already exists',
+    description: "User already exists",
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid registration data',
+    description: "Invalid registration data",
   })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponse> {
     // Implementation would call authService.register()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('refresh')
+  @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Refresh access token',
-    description: 'Generates a new access token using a valid refresh token',
+    summary: "Refresh access token",
+    description: "Generates a new access token using a valid refresh token",
   })
   @ApiBody({
     type: RefreshTokenDto,
-    description: 'Refresh token',
+    description: "Refresh token",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Token refreshed successfully',
+    description: "Token refreshed successfully",
     type: AuthResponse,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid or expired refresh token',
+    description: "Invalid or expired refresh token",
   })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto): Promise<AuthResponse> {
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<AuthResponse> {
     // Implementation would call authService.refreshToken()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('logout')
+  @Post("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth("JWT-auth")
   @ApiOperation({
-    summary: 'User logout',
-    description: 'Invalidates the current access and refresh tokens',
+    summary: "User logout",
+    description: "Invalidates the current access and refresh tokens",
   })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
-    description: 'Logout successful',
+    description: "Logout successful",
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   async logout(@Request() req: any): Promise<void> {
     // Implementation would call authService.logout()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('forgot-password')
+  @Post("forgot-password")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Forgot password',
-    description: 'Sends a password reset email to the user',
+    summary: "Forgot password",
+    description: "Sends a password reset email to the user",
   })
   @ApiBody({
     type: ForgotPasswordDto,
-    description: 'Forgot password request',
+    description: "Forgot password request",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Password reset email sent',
+    description: "Password reset email sent",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        message: { type: 'string', example: 'Password reset email sent' },
+        message: { type: "string", example: "Password reset email sent" },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'User not found',
+    description: "User not found",
   })
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     // Implementation would call authService.forgotPassword()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('reset-password')
+  @Post("reset-password")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Reset password',
-    description: 'Resets user password using a valid reset token',
+    summary: "Reset password",
+    description: "Resets user password using a valid reset token",
   })
   @ApiBody({
     type: ResetPasswordDto,
-    description: 'Password reset data',
+    description: "Password reset data",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Password reset successful',
+    description: "Password reset successful",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        message: { type: 'string', example: 'Password reset successful' },
+        message: { type: "string", example: "Password reset successful" },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid or expired reset token',
+    description: "Invalid or expired reset token",
   })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     // Implementation would call authService.resetPassword()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get('me')
-  @ApiBearerAuth('JWT-auth')
+  @Get("me")
+  @ApiBearerAuth("JWT-auth")
   @ApiOperation({
-    summary: 'Get current user profile',
-    description: 'Retrieves the profile of the currently authenticated user',
+    summary: "Get current user profile",
+    description: "Retrieves the profile of the currently authenticated user",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'User profile retrieved successfully',
+    description: "User profile retrieved successfully",
     type: User,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   async getProfile(@Request() req: any): Promise<User> {
     // Implementation would call authService.getUserProfile()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Put('me')
-  @ApiBearerAuth('JWT-auth')
+  @Put("me")
+  @ApiBearerAuth("JWT-auth")
   @ApiOperation({
-    summary: 'Update user profile',
-    description: 'Updates the profile of the currently authenticated user',
+    summary: "Update user profile",
+    description: "Updates the profile of the currently authenticated user",
   })
   @ApiBody({
     type: UpdateProfileDto,
-    description: 'Profile update data',
+    description: "Profile update data",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Profile updated successfully',
+    description: "Profile updated successfully",
     type: User,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid profile data',
+    description: "Invalid profile data",
   })
   async updateProfile(
     @Request() req: any,
     @Body() updateProfileDto: UpdateProfileDto,
   ): Promise<User> {
     // Implementation would call authService.updateProfile()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Put('change-password')
+  @Put("change-password")
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth("JWT-auth")
   @ApiOperation({
-    summary: 'Change password',
-    description: 'Changes the password for the currently authenticated user',
+    summary: "Change password",
+    description: "Changes the password for the currently authenticated user",
   })
   @ApiBody({
     type: ChangePasswordDto,
-    description: 'Password change data',
+    description: "Password change data",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Password changed successfully',
+    description: "Password changed successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        message: { type: 'string', example: 'Password changed successfully' },
+        message: { type: "string", example: "Password changed successfully" },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid current password',
+    description: "Invalid current password",
   })
   async changePassword(
     @Request() req: any,
     @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     // Implementation would call authService.changePassword()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Post('validate-token')
+  @Post("validate-token")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Validate access token',
-    description: 'Validates an access token and returns user information',
+    summary: "Validate access token",
+    description: "Validates an access token and returns user information",
   })
   @ApiBody({
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        token: { type: 'string', description: 'Access token to validate' },
+        token: { type: "string", description: "Access token to validate" },
       },
-      required: ['token'],
+      required: ["token"],
     },
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Token is valid',
+    description: "Token is valid",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        valid: { type: 'boolean', example: true },
-        user: { $ref: '#/components/schemas/User' },
+        valid: { type: "boolean", example: true },
+        user: { $ref: "#/components/schemas/User" },
         permissions: {
-          type: 'array',
-          items: { type: 'string' },
-          example: ['read:workflows', 'write:workflows'],
+          type: "array",
+          items: { type: "string" },
+          example: ["read:workflows", "write:workflows"],
         },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Token is invalid or expired',
+    description: "Token is invalid or expired",
   })
   async validateToken(@Body() body: { token: string }): Promise<{
     valid: boolean;
@@ -385,50 +388,51 @@ export class AuthController {
     permissions: string[];
   }> {
     // Implementation would call authService.validateToken()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get('permissions')
-  @ApiBearerAuth('JWT-auth')
+  @Get("permissions")
+  @ApiBearerAuth("JWT-auth")
   @ApiOperation({
-    summary: 'Get user permissions',
-    description: 'Retrieves the permissions for the currently authenticated user',
+    summary: "Get user permissions",
+    description:
+      "Retrieves the permissions for the currently authenticated user",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'User permissions retrieved successfully',
+    description: "User permissions retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        userId: { type: 'string' },
-        tenantId: { type: 'string' },
+        userId: { type: "string" },
+        tenantId: { type: "string" },
         roles: {
-          type: 'array',
-          items: { type: 'string' },
-          example: ['user', 'admin'],
+          type: "array",
+          items: { type: "string" },
+          example: ["user", "admin"],
         },
         permissions: {
-          type: 'array',
-          items: { type: 'string' },
-          example: ['read:workflows', 'write:workflows', 'admin:users'],
+          type: "array",
+          items: { type: "string" },
+          example: ["read:workflows", "write:workflows", "admin:users"],
         },
         effectivePermissions: {
-          type: 'object',
+          type: "object",
           properties: {
             workflows: {
-              type: 'object',
+              type: "object",
               properties: {
-                read: { type: 'boolean' },
-                write: { type: 'boolean' },
-                delete: { type: 'boolean' },
+                read: { type: "boolean" },
+                write: { type: "boolean" },
+                delete: { type: "boolean" },
               },
             },
             executions: {
-              type: 'object',
+              type: "object",
               properties: {
-                read: { type: 'boolean' },
-                start: { type: 'boolean' },
-                stop: { type: 'boolean' },
+                read: { type: "boolean" },
+                start: { type: "boolean" },
+                stop: { type: "boolean" },
               },
             },
           },
@@ -438,7 +442,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   async getUserPermissions(@Request() req: any): Promise<{
     userId: string;
@@ -448,6 +452,6 @@ export class AuthController {
     effectivePermissions: Record<string, Record<string, boolean>>;
   }> {
     // Implementation would call authService.getUserPermissions()
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 }

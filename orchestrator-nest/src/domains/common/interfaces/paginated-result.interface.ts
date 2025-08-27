@@ -13,12 +13,12 @@ export interface PaginationOptions {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 export interface SortOptions {
   field: string;
-  order: 'ASC' | 'DESC';
+  order: "ASC" | "DESC";
 }
 
 export interface FilterOptions {
@@ -35,7 +35,7 @@ export class PaginationHelper {
     const totalPages = Math.ceil(total / limit);
     const hasNext = page < totalPages;
     const hasPrevious = page > 1;
-    
+
     return {
       items,
       total,

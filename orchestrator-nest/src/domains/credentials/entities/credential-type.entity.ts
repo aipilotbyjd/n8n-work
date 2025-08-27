@@ -5,12 +5,12 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm';
-import { Credential } from './credential.entity';
+} from "typeorm";
+import { Credential } from "./credential.entity";
 
-@Entity('credential_types')
+@Entity("credential_types")
 export class CredentialType {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true, length: 100 })
@@ -19,19 +19,19 @@ export class CredentialType {
   @Column({ length: 255 })
   displayName: string; // e.g., 'Google API', 'Slack OAuth', 'Basic Authentication'
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   description: string;
 
   @Column({ nullable: true })
   icon: string; // Icon URL or base64
 
-  @Column('jsonb')
+  @Column("jsonb")
   schema: any; // JSON schema for credential properties
 
   @Column({ default: false })
   oauth: boolean; // Whether this credential type uses OAuth
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   oauthConfig: any; // OAuth configuration (client ID, scopes, endpoints)
 
   @Column({ default: true })
@@ -40,7 +40,7 @@ export class CredentialType {
   @Column({ default: false })
   isBuiltIn: boolean; // Built-in types cannot be deleted
 
-  @OneToMany(() => Credential, credential => credential.type)
+  @OneToMany(() => Credential, (credential) => credential.type)
   credentials: Credential[];
 
   @CreateDateColumn()

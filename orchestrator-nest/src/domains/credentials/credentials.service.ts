@@ -1,19 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Credential } from './entities/credential.entity';
-import { CredentialType } from './entities/credential-type.entity';
-import { OAuthToken } from './entities/oauth-token.entity';
-import { CreateCredentialDto } from './dto/create-credential.dto';
-import { UpdateCredentialDto } from './dto/update-credential.dto';
-import { CredentialResponseDto } from './dto/credential-response.dto';
-import { CredentialEncryptionService } from './services/credential-encryption.service';
-import { OAuthService } from './services/oauth.service';
-import { CredentialValidationService } from './services/credential-validation.service';
-import { TenantService } from '../tenants/tenants.service';
-import { MetricsService } from '../../observability/metrics.service';
-import { AuditLogService } from '../audit/audit-log.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Credential } from "./entities/credential.entity";
+import { CredentialType } from "./entities/credential-type.entity";
+import { OAuthToken } from "./entities/oauth-token.entity";
+import { CreateCredentialDto } from "./dto/create-credential.dto";
+import { UpdateCredentialDto } from "./dto/update-credential.dto";
+import { CredentialResponseDto } from "./dto/credential-response.dto";
+import { CredentialEncryptionService } from "./services/credential-encryption.service";
+import { OAuthService } from "./services/oauth.service";
+import { CredentialValidationService } from "./services/credential-validation.service";
+import { TenantService } from "../tenants/tenants.service";
+import { MetricsService } from "../../observability/metrics.service";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class CredentialsService {
@@ -50,7 +55,7 @@ export class CredentialsService {
     });
 
     if (!credentialType) {
-      throw new NotFoundException('Credential type not found');
+      throw new NotFoundException("Credential type not found");
     }
 
     // Check for duplicate names within tenant
@@ -62,7 +67,7 @@ export class CredentialsService {
     });
 
     if (existingCredential) {
-      throw new ConflictException('Credential with this name already exists');
+      throw new ConflictException("Credential with this name already exists");
     }
 
     // Validate credential data against type schema
@@ -90,7 +95,7 @@ export class CredentialsService {
     const savedCredential = await this.credentialRepository.save(credential);
 
     // Emit event
-    this.eventEmitter.emit('credential.created', {
+    this.eventEmitter.emit("credential.created", {
       credentialId: savedCredential.id,
       tenantId,
       userId,
@@ -98,18 +103,18 @@ export class CredentialsService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'credential.created',
-      resourceType: 'credential',
+      action: "credential.created",
+      resourceType: "credential",
       resourceId: savedCredential.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: { credentialName: savedCredential.name },
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('credentials_created_total', {
+    this.metricsService.incrementCounter("credentials_created_total", {
       tenant_id: tenantId,
       credential_type: credentialType.name,
     });
@@ -120,15 +125,20 @@ export class CredentialsService {
   /**
    * Find all credentials for a tenant
    */
-  async findAll(tenantId: string, includeData = false): Promise<CredentialResponseDto[]> {
+  async findAll(
+    tenantId: string,
+    includeData = false,
+  ): Promise<CredentialResponseDto[]> {
     const credentials = await this.credentialRepository.find({
       where: { tenantId },
-      relations: ['type'],
-      order: { createdAt: 'DESC' },
+      relations: ["type"],
+      order: { createdAt: "DESC" },
     });
 
     return Promise.all(
-      credentials.map(credential => this.toResponseDto(credential, includeData)),
+      credentials.map((credential) =>
+        this.toResponseDto(credential, includeData),
+      ),
     );
   }
 
@@ -142,11 +152,11 @@ export class CredentialsService {
   ): Promise<CredentialResponseDto> {
     const credential = await this.credentialRepository.findOne({
       where: { id, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     return this.toResponseDto(credential, includeData);
@@ -163,15 +173,18 @@ export class CredentialsService {
   ): Promise<CredentialResponseDto> {
     const credential = await this.credentialRepository.findOne({
       where: { id, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     // Check for name conflicts if name is being updated
-    if (updateCredentialDto.name && updateCredentialDto.name !== credential.name) {
+    if (
+      updateCredentialDto.name &&
+      updateCredentialDto.name !== credential.name
+    ) {
       const existingCredential = await this.credentialRepository.findOne({
         where: {
           name: updateCredentialDto.name,
@@ -181,7 +194,7 @@ export class CredentialsService {
       });
 
       if (existingCredential) {
-        throw new ConflictException('Credential with this name already exists');
+        throw new ConflictException("Credential with this name already exists");
       }
     }
 
@@ -210,7 +223,7 @@ export class CredentialsService {
     const savedCredential = await this.credentialRepository.save(credential);
 
     // Emit event
-    this.eventEmitter.emit('credential.updated', {
+    this.eventEmitter.emit("credential.updated", {
       credentialId: savedCredential.id,
       tenantId,
       userId,
@@ -218,13 +231,13 @@ export class CredentialsService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'credential.updated',
-      resourceType: 'credential',
+      action: "credential.updated",
+      resourceType: "credential",
       resourceId: savedCredential.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: { credentialName: savedCredential.name },
     });
 
@@ -240,7 +253,7 @@ export class CredentialsService {
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     // Check if credential is in use by any workflows
@@ -250,7 +263,7 @@ export class CredentialsService {
     await this.credentialRepository.remove(credential);
 
     // Emit event
-    this.eventEmitter.emit('credential.deleted', {
+    this.eventEmitter.emit("credential.deleted", {
       credentialId: id,
       tenantId,
       userId,
@@ -258,18 +271,18 @@ export class CredentialsService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'credential.deleted',
-      resourceType: 'credential',
+      action: "credential.deleted",
+      resourceType: "credential",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       oldValues: { credentialName: credential.name },
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('credentials_deleted_total', {
+    this.metricsService.incrementCounter("credentials_deleted_total", {
       tenant_id: tenantId,
     });
   }
@@ -277,14 +290,17 @@ export class CredentialsService {
   /**
    * Test a credential (verify it works with the target service)
    */
-  async test(id: string, tenantId: string): Promise<{ success: boolean; message?: string }> {
+  async test(
+    id: string,
+    tenantId: string,
+  ): Promise<{ success: boolean; message?: string }> {
     const credential = await this.credentialRepository.findOne({
       where: { id, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     try {
@@ -301,26 +317,26 @@ export class CredentialsService {
       );
 
       // Update metrics
-      this.metricsService.incrementCounter('credentials_tested_total', {
+      this.metricsService.incrementCounter("credentials_tested_total", {
         tenant_id: tenantId,
         credential_type: credential.type.name,
         success: isValid.toString(),
       });
 
       return isValid
-        ? { success: true, message: 'Credential test successful' }
-        : { success: false, message: 'Credential test failed' };
+        ? { success: true, message: "Credential test successful" }
+        : { success: false, message: "Credential test failed" };
     } catch (error) {
       // Update metrics
-      this.metricsService.incrementCounter('credentials_tested_total', {
+      this.metricsService.incrementCounter("credentials_tested_total", {
         tenant_id: tenantId,
         credential_type: credential.type.name,
-        success: 'false',
+        success: "false",
       });
 
       return {
         success: false,
-        message: error.message || 'Credential test failed',
+        message: error.message || "Credential test failed",
       };
     }
   }
@@ -334,7 +350,7 @@ export class CredentialsService {
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     return this.encryptionService.decrypt(credential.data, tenantId);
@@ -350,15 +366,15 @@ export class CredentialsService {
   ): Promise<{ authUrl: string; state: string }> {
     const credential = await this.credentialRepository.findOne({
       where: { id: credentialId, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     if (!credential.type.oauth) {
-      throw new BadRequestException('Credential type does not support OAuth');
+      throw new BadRequestException("Credential type does not support OAuth");
     }
 
     return this.oauthService.startFlow(credential, redirectUrl);
@@ -384,11 +400,11 @@ export class CredentialsService {
   ): Promise<CredentialResponseDto> {
     const credential = await this.credentialRepository.findOne({
       where: { id: credentialId, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     return this.oauthService.refreshToken(credential);
@@ -399,7 +415,7 @@ export class CredentialsService {
    */
   async getCredentialTypes(): Promise<CredentialType[]> {
     return this.credentialTypeRepository.find({
-      order: { name: 'ASC' },
+      order: { name: "ASC" },
     });
   }
 

@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { ClickHouse } from 'clickhouse';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { EventEmitter2, OnEvent } from "@nestjs/event-emitter";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { ClickHouse } from "clickhouse";
 
 @Injectable()
 export class AnalyticsService {
@@ -14,29 +14,38 @@ export class AnalyticsService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.clickhouse = new ClickHouse({
-      url: this.configService.get('CLICKHOUSE_URL'),
-      port: this.configService.get('CLICKHOUSE_PORT', 8123),
-      debug: this.configService.get('NODE_ENV') === 'development',
+      url: this.configService.get("CLICKHOUSE_URL"),
+      port: this.configService.get("CLICKHOUSE_PORT", 8123),
+      debug: this.configService.get("NODE_ENV") === "development",
       basicAuth: {
-        username: this.configService.get('CLICKHOUSE_USER'),
-        password: this.configService.get('CLICKHOUSE_PASSWORD'),
+        username: this.configService.get("CLICKHOUSE_USER"),
+        password: this.configService.get("CLICKHOUSE_PASSWORD"),
       },
       isUseGzip: true,
       trimQuery: true,
       usePost: false,
     });
 
-    this.dataLineageTracker = new DataLineageTracker(this.clickhouse, this.logger);
-    this.complianceReporter = new ComplianceReporter(this.clickhouse, this.logger);
-    this.businessIntelligence = new BusinessIntelligenceEngine(this.clickhouse, this.logger);
+    this.dataLineageTracker = new DataLineageTracker(
+      this.clickhouse,
+      this.logger,
+    );
+    this.complianceReporter = new ComplianceReporter(
+      this.clickhouse,
+      this.logger,
+    );
+    this.businessIntelligence = new BusinessIntelligenceEngine(
+      this.clickhouse,
+      this.logger,
+    );
   }
 
   async onModuleInit() {
     await this.initializeAnalyticsDatabase();
-    this.logger.log('Analytics service initialized with ClickHouse');
+    this.logger.log("Analytics service initialized with ClickHouse");
   }
 
   // Initialize ClickHouse schemas and tables
@@ -222,9 +231,13 @@ export class AnalyticsService {
     for (const query of queries) {
       try {
         await this.clickhouse.query(query).toPromise();
-        this.logger.debug(`Executed ClickHouse query: ${query.substring(0, 50)}...`);
+        this.logger.debug(
+          `Executed ClickHouse query: ${query.substring(0, 50)}...`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to execute ClickHouse query: ${error.message}`);
+        this.logger.error(
+          `Failed to execute ClickHouse query: ${error.message}`,
+        );
         throw error;
       }
     }
@@ -282,15 +295,19 @@ export class AnalyticsService {
     for (const view of views) {
       try {
         await this.clickhouse.query(view).toPromise();
-        this.logger.debug(`Created materialized view: ${view.substring(0, 50)}...`);
+        this.logger.debug(
+          `Created materialized view: ${view.substring(0, 50)}...`,
+        );
       } catch (error) {
-        this.logger.warn(`Failed to create materialized view: ${error.message}`);
+        this.logger.warn(
+          `Failed to create materialized view: ${error.message}`,
+        );
       }
     }
   }
 
   // Event handlers for real-time data ingestion
-  @OnEvent('workflow.executed')
+  @OnEvent("workflow.executed")
   async handleWorkflowExecuted(event: WorkflowExecutedEvent): Promise<void> {
     const query = `INSERT INTO workflow_executions FORMAT JSONEachRow`;
     const data = {
@@ -312,12 +329,12 @@ export class AnalyticsService {
     };
 
     await this.insertData(query, [data]);
-    
+
     // Track data lineage
     await this.dataLineageTracker.trackWorkflowExecution(event);
   }
 
-  @OnEvent('step.executed')
+  @OnEvent("step.executed")
   async handleStepExecuted(event: StepExecutedEvent): Promise<void> {
     const query = `INSERT INTO step_executions FORMAT JSONEachRow`;
     const data = {
@@ -342,12 +359,12 @@ export class AnalyticsService {
     };
 
     await this.insertData(query, [data]);
-    
+
     // Track step-level data lineage
     await this.dataLineageTracker.trackStepExecution(event);
   }
 
-  @OnEvent('api.request')
+  @OnEvent("api.request")
   async handleApiRequest(event: ApiRequestEvent): Promise<void> {
     const query = `INSERT INTO api_usage FORMAT JSONEachRow`;
     const data = {
@@ -370,7 +387,7 @@ export class AnalyticsService {
     await this.insertData(query, [data]);
   }
 
-  @OnEvent('audit.event')
+  @OnEvent("audit.event")
   async handleAuditEvent(event: AuditEvent): Promise<void> {
     const query = `INSERT INTO audit_events FORMAT JSONEachRow`;
     const data = {
@@ -394,15 +411,20 @@ export class AnalyticsService {
   }
 
   // Analytics query methods
-  async getWorkflowAnalytics(tenantId: string, timeRange: TimeRange, filters?: AnalyticsFilters): Promise<WorkflowAnalytics> {
+  async getWorkflowAnalytics(
+    tenantId: string,
+    timeRange: TimeRange,
+    filters?: AnalyticsFilters,
+  ): Promise<WorkflowAnalytics> {
     const { startTime, endTime } = this.parseTimeRange(timeRange);
-    
-    const [executionStats, performanceMetrics, errorRates, topWorkflows] = await Promise.all([
-      this.getExecutionStatistics(tenantId, startTime, endTime, filters),
-      this.getPerformanceMetrics(tenantId, startTime, endTime, filters),
-      this.getErrorRates(tenantId, startTime, endTime, filters),
-      this.getTopWorkflows(tenantId, startTime, endTime, filters),
-    ]);
+
+    const [executionStats, performanceMetrics, errorRates, topWorkflows] =
+      await Promise.all([
+        this.getExecutionStatistics(tenantId, startTime, endTime, filters),
+        this.getPerformanceMetrics(tenantId, startTime, endTime, filters),
+        this.getErrorRates(tenantId, startTime, endTime, filters),
+        this.getTopWorkflows(tenantId, startTime, endTime, filters),
+      ]);
 
     return {
       timeRange,
@@ -414,9 +436,12 @@ export class AnalyticsService {
     };
   }
 
-  async getUsageAnalytics(tenantId: string, timeRange: TimeRange): Promise<UsageAnalytics> {
+  async getUsageAnalytics(
+    tenantId: string,
+    timeRange: TimeRange,
+  ): Promise<UsageAnalytics> {
     const { startTime, endTime } = this.parseTimeRange(timeRange);
-    
+
     const query = `
       SELECT 
         count() as total_executions,
@@ -436,17 +461,31 @@ export class AnalyticsService {
     return this.mapUsageAnalytics(result[0]);
   }
 
-  async getDataLineage(workflowId: string, executionId?: string): Promise<DataLineageGraph> {
+  async getDataLineage(
+    workflowId: string,
+    executionId?: string,
+  ): Promise<DataLineageGraph> {
     return this.dataLineageTracker.getLineageGraph(workflowId, executionId);
   }
 
-  async getComplianceReport(tenantId: string, timeRange: TimeRange, reportType: ComplianceReportType): Promise<ComplianceReport> {
-    return this.complianceReporter.generateReport(tenantId, timeRange, reportType);
+  async getComplianceReport(
+    tenantId: string,
+    timeRange: TimeRange,
+    reportType: ComplianceReportType,
+  ): Promise<ComplianceReport> {
+    return this.complianceReporter.generateReport(
+      tenantId,
+      timeRange,
+      reportType,
+    );
   }
 
-  async getBillingData(tenantId: string, timeRange: TimeRange): Promise<BillingData> {
+  async getBillingData(
+    tenantId: string,
+    timeRange: TimeRange,
+  ): Promise<BillingData> {
     const { startTime, endTime } = this.parseTimeRange(timeRange);
-    
+
     const queries = {
       executions: `
         SELECT count() as count, sum(duration_ms) as total_duration_ms
@@ -500,7 +539,7 @@ export class AnalyticsService {
   async getDashboardData(tenantId: string): Promise<DashboardData> {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    
+
     const queries = {
       activeExecutions: `
         SELECT count() as count
@@ -545,18 +584,21 @@ export class AnalyticsService {
   }
 
   // Business Intelligence queries
-  async getBusinessInsights(tenantId: string, timeRange: TimeRange): Promise<BusinessInsights> {
+  async getBusinessInsights(
+    tenantId: string,
+    timeRange: TimeRange,
+  ): Promise<BusinessInsights> {
     return this.businessIntelligence.generateInsights(tenantId, timeRange);
   }
 
   // Scheduled data cleanup and aggregation tasks
   @Cron(CronExpression.EVERY_HOUR)
   async aggregateHourlyMetrics(): Promise<void> {
-    this.logger.debug('Running hourly metrics aggregation');
-    
+    this.logger.debug("Running hourly metrics aggregation");
+
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    
+
     // Aggregate workflow metrics
     const aggregationQuery = `
       INSERT INTO business_metrics
@@ -573,38 +615,42 @@ export class AnalyticsService {
         AND start_time < '${hourAgo.toISOString()}'
       GROUP BY tenant_id, status, toStartOfHour(start_time)
     `;
-    
+
     await this.executeQuery(aggregationQuery);
-    this.logger.debug('Completed hourly metrics aggregation');
+    this.logger.debug("Completed hourly metrics aggregation");
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async cleanupOldData(): Promise<void> {
-    this.logger.debug('Running data cleanup job');
-    
+    this.logger.debug("Running data cleanup job");
+
     const retentionPolicies = [
-      { table: 'workflow_executions', days: 730 }, // 2 years
-      { table: 'step_executions', days: 730 }, // 2 years
-      { table: 'api_usage', days: 365 }, // 1 year
-      { table: 'resource_usage', days: 365 }, // 1 year
-      { table: 'audit_events', days: 2555 }, // 7 years
-      { table: 'error_events', days: 730 }, // 2 years
-      { table: 'performance_metrics', days: 365 }, // 1 year
+      { table: "workflow_executions", days: 730 }, // 2 years
+      { table: "step_executions", days: 730 }, // 2 years
+      { table: "api_usage", days: 365 }, // 1 year
+      { table: "resource_usage", days: 365 }, // 1 year
+      { table: "audit_events", days: 2555 }, // 7 years
+      { table: "error_events", days: 730 }, // 2 years
+      { table: "performance_metrics", days: 365 }, // 1 year
     ];
-    
+
     for (const policy of retentionPolicies) {
-      const cutoffDate = new Date(Date.now() - policy.days * 24 * 60 * 60 * 1000);
+      const cutoffDate = new Date(
+        Date.now() - policy.days * 24 * 60 * 60 * 1000,
+      );
       const deleteQuery = `ALTER TABLE ${policy.table} DELETE WHERE created_at < '${cutoffDate.toISOString()}'`;
-      
+
       try {
         await this.executeQuery(deleteQuery);
         this.logger.debug(`Cleaned up old data from ${policy.table}`);
       } catch (error) {
-        this.logger.error(`Failed to cleanup ${policy.table}: ${error.message}`);
+        this.logger.error(
+          `Failed to cleanup ${policy.table}: ${error.message}`,
+        );
       }
     }
-    
-    this.logger.debug('Completed data cleanup job');
+
+    this.logger.debug("Completed data cleanup job");
   }
 
   // Helper methods
@@ -628,24 +674,27 @@ export class AnalyticsService {
     }
   }
 
-  private parseTimeRange(timeRange: TimeRange): { startTime: Date; endTime: Date } {
+  private parseTimeRange(timeRange: TimeRange): {
+    startTime: Date;
+    endTime: Date;
+  } {
     const now = new Date();
     let startTime: Date;
 
     switch (timeRange) {
-      case 'hour':
+      case "hour":
         startTime = new Date(now.getTime() - 60 * 60 * 1000);
         break;
-      case 'day':
+      case "day":
         startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
-      case 'week':
+      case "week":
         startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case 'month':
+      case "month":
         startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
-      case 'year':
+      case "year":
         startTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
       default:
@@ -655,22 +704,42 @@ export class AnalyticsService {
     return { startTime, endTime: now };
   }
 
-  private async getExecutionStatistics(tenantId: string, startTime: Date, endTime: Date, filters?: AnalyticsFilters): Promise<any> {
+  private async getExecutionStatistics(
+    tenantId: string,
+    startTime: Date,
+    endTime: Date,
+    filters?: AnalyticsFilters,
+  ): Promise<any> {
     // Implementation for execution statistics
     return {};
   }
 
-  private async getPerformanceMetrics(tenantId: string, startTime: Date, endTime: Date, filters?: AnalyticsFilters): Promise<any> {
+  private async getPerformanceMetrics(
+    tenantId: string,
+    startTime: Date,
+    endTime: Date,
+    filters?: AnalyticsFilters,
+  ): Promise<any> {
     // Implementation for performance metrics
     return {};
   }
 
-  private async getErrorRates(tenantId: string, startTime: Date, endTime: Date, filters?: AnalyticsFilters): Promise<any> {
+  private async getErrorRates(
+    tenantId: string,
+    startTime: Date,
+    endTime: Date,
+    filters?: AnalyticsFilters,
+  ): Promise<any> {
     // Implementation for error rates
     return {};
   }
 
-  private async getTopWorkflows(tenantId: string, startTime: Date, endTime: Date, filters?: AnalyticsFilters): Promise<any> {
+  private async getTopWorkflows(
+    tenantId: string,
+    startTime: Date,
+    endTime: Date,
+    filters?: AnalyticsFilters,
+  ): Promise<any> {
     // Implementation for top workflows
     return {};
   }
@@ -685,7 +754,7 @@ export class AnalyticsService {
 class DataLineageTracker {
   constructor(
     private readonly clickhouse: ClickHouse,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   async trackWorkflowExecution(event: WorkflowExecutedEvent): Promise<void> {
@@ -696,7 +765,10 @@ class DataLineageTracker {
     // Implementation for step-level lineage tracking
   }
 
-  async getLineageGraph(workflowId: string, executionId?: string): Promise<DataLineageGraph> {
+  async getLineageGraph(
+    workflowId: string,
+    executionId?: string,
+  ): Promise<DataLineageGraph> {
     // Implementation for retrieving lineage graph
     return {} as DataLineageGraph;
   }
@@ -705,10 +777,14 @@ class DataLineageTracker {
 class ComplianceReporter {
   constructor(
     private readonly clickhouse: ClickHouse,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
-  async generateReport(tenantId: string, timeRange: TimeRange, reportType: ComplianceReportType): Promise<ComplianceReport> {
+  async generateReport(
+    tenantId: string,
+    timeRange: TimeRange,
+    reportType: ComplianceReportType,
+  ): Promise<ComplianceReport> {
     // Implementation for compliance reporting
     return {} as ComplianceReport;
   }
@@ -717,10 +793,13 @@ class ComplianceReporter {
 class BusinessIntelligenceEngine {
   constructor(
     private readonly clickhouse: ClickHouse,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
-  async generateInsights(tenantId: string, timeRange: TimeRange): Promise<BusinessInsights> {
+  async generateInsights(
+    tenantId: string,
+    timeRange: TimeRange,
+  ): Promise<BusinessInsights> {
     // Implementation for business insights
     return {} as BusinessInsights;
   }
@@ -800,8 +879,8 @@ interface AuditEvent {
   complianceTags?: string[];
 }
 
-type TimeRange = 'hour' | 'day' | 'week' | 'month' | 'year';
-type ComplianceReportType = 'gdpr' | 'hipaa' | 'sox' | 'pci-dss';
+type TimeRange = "hour" | "day" | "week" | "month" | "year";
+type ComplianceReportType = "gdpr" | "hipaa" | "sox" | "pci-dss";
 
 interface AnalyticsFilters {
   workflowIds?: string[];

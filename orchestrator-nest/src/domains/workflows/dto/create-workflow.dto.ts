@@ -1,5 +1,11 @@
-import { IsString, IsOptional, IsArray, IsObject, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsObject,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 export class WorkflowNodeDto {
   @IsString()

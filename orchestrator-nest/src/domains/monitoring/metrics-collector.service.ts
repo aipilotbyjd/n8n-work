@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SystemMetric } from './entities/system-metric.entity';
-import { AuditLogService } from '../audit/audit-log.service';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { SystemMetric } from "./entities/system-metric.entity";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class MetricsCollectorService {
@@ -23,7 +23,9 @@ export class MetricsCollectorService {
     endTime?: string,
     interval?: string,
   ): Promise<any> {
-    const start = startTime ? new Date(startTime) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const start = startTime
+      ? new Date(startTime)
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
     const end = endTime ? new Date(endTime) : new Date();
 
     const metrics = await this.systemMetricRepository.find({
@@ -34,10 +36,10 @@ export class MetricsCollectorService {
           lte: end,
         } as any,
       },
-      order: { timestamp: 'ASC' },
+      order: { timestamp: "ASC" },
     });
 
-    return this.aggregateMetrics(metrics, interval || '5m');
+    return this.aggregateMetrics(metrics, interval || "5m");
   }
 
   /**
@@ -48,7 +50,9 @@ export class MetricsCollectorService {
     startTime?: string,
     endTime?: string,
   ): Promise<any> {
-    const start = startTime ? new Date(startTime) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const start = startTime
+      ? new Date(startTime)
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
     const end = endTime ? new Date(endTime) : new Date();
 
     // Mock application metrics - in real implementation, this would query actual metrics
@@ -90,9 +94,9 @@ export class MetricsCollectorService {
     const metric = this.systemMetricRepository.create({
       tenantId,
       metricName: metricsData.name,
-      metricType: 'custom',
+      metricType: "custom",
       value: metricsData.value,
-      unit: metricsData.unit || 'count',
+      unit: metricsData.unit || "count",
       tags: metricsData.tags || {},
       metadata: { recordedBy: userId, ...metricsData.metadata },
       timestamp: new Date(),
@@ -101,7 +105,7 @@ export class MetricsCollectorService {
     await this.systemMetricRepository.save(metric);
 
     // Emit metrics recorded event
-    this.eventEmitter.emit('metrics.recorded', {
+    this.eventEmitter.emit("metrics.recorded", {
       tenantId,
       metricName: metricsData.name,
       value: metricsData.value,
@@ -110,8 +114,8 @@ export class MetricsCollectorService {
 
     // Log audit event
     await this.auditLogService.log(
-      'metrics.recorded',
-      'system_metric',
+      "metrics.recorded",
+      "system_metric",
       metric.id,
       userId,
       { name: metricsData.name, value: metricsData.value },
@@ -127,40 +131,40 @@ export class MetricsCollectorService {
     // Collect CPU metrics
     const cpuMetric = this.systemMetricRepository.create({
       tenantId,
-      metricName: 'cpu_usage',
-      metricType: 'system',
+      metricName: "cpu_usage",
+      metricType: "system",
       value: this.getCpuUsage(),
-      unit: 'percent',
+      unit: "percent",
       timestamp,
     });
 
     // Collect Memory metrics
     const memoryMetric = this.systemMetricRepository.create({
       tenantId,
-      metricName: 'memory_usage',
-      metricType: 'system',
+      metricName: "memory_usage",
+      metricType: "system",
       value: this.getMemoryUsage(),
-      unit: 'percent',
+      unit: "percent",
       timestamp,
     });
 
     // Collect Disk metrics
     const diskMetric = this.systemMetricRepository.create({
       tenantId,
-      metricName: 'disk_usage',
-      metricType: 'system',
+      metricName: "disk_usage",
+      metricType: "system",
       value: this.getDiskUsage(),
-      unit: 'percent',
+      unit: "percent",
       timestamp,
     });
 
     // Collect Network metrics
     const networkMetric = this.systemMetricRepository.create({
       tenantId,
-      metricName: 'network_io',
-      metricType: 'system',
+      metricName: "network_io",
+      metricType: "system",
       value: this.getNetworkIO(),
-      unit: 'mbps',
+      unit: "mbps",
       timestamp,
     });
 
@@ -179,8 +183,9 @@ export class MetricsCollectorService {
     const intervalMs = this.parseInterval(interval);
     const aggregated = new Map();
 
-    metrics.forEach(metric => {
-      const bucketTime = Math.floor(metric.timestamp.getTime() / intervalMs) * intervalMs;
+    metrics.forEach((metric) => {
+      const bucketTime =
+        Math.floor(metric.timestamp.getTime() / intervalMs) * intervalMs;
       const bucketKey = `${metric.metricName}_${bucketTime}`;
 
       if (!aggregated.has(bucketKey)) {
@@ -196,7 +201,7 @@ export class MetricsCollectorService {
     });
 
     // Calculate statistics for each bucket
-    return Array.from(aggregated.values()).map(bucket => ({
+    return Array.from(aggregated.values()).map((bucket) => ({
       ...bucket,
       avg: bucket.values.reduce((a, b) => a + b, 0) / bucket.values.length,
       min: Math.min(...bucket.values),
@@ -216,11 +221,16 @@ export class MetricsCollectorService {
     const unit = match[2];
 
     switch (unit) {
-      case 's': return value * 1000;
-      case 'm': return value * 60 * 1000;
-      case 'h': return value * 60 * 60 * 1000;
-      case 'd': return value * 24 * 60 * 60 * 1000;
-      default: return 5 * 60 * 1000;
+      case "s":
+        return value * 1000;
+      case "m":
+        return value * 60 * 1000;
+      case "h":
+        return value * 60 * 60 * 1000;
+      case "d":
+        return value * 24 * 60 * 60 * 1000;
+      default:
+        return 5 * 60 * 1000;
     }
   }
 

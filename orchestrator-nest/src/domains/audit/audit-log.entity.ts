@@ -1,15 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from "typeorm";
 
-@Entity('audit_logs')
+@Entity("audit_logs")
 export class AuditLogEntry {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   tenantId: string;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: "uuid", nullable: true })
   @Index()
   userId: string;
 
@@ -21,14 +21,14 @@ export class AuditLogEntry {
   @Index()
   resourceType: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   resourceId: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   oldValues: any;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   newValues: any;
 
   @Column({ length: 50 })
@@ -37,7 +37,10 @@ export class AuditLogEntry {
   @Column({ length: 255 })
   userAgent: string;
 
-  @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: "timestamp with time zone",
+    default: () => "CURRENT_TIMESTAMP",
+  })
   @Index()
   timestamp: Date;
 }

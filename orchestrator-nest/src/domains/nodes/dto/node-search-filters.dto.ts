@@ -1,11 +1,19 @@
-import { IsOptional, IsEnum, IsString, IsBoolean, IsNumber, Min, Max } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { NodeCategory } from '../entities/node-type.entity';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsBoolean,
+  IsNumber,
+  Min,
+  Max,
+} from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { NodeCategory } from "../entities/node-type.entity";
 
 export class NodeSearchFilters {
   @ApiPropertyOptional({
-    description: 'Filter by node category',
+    description: "Filter by node category",
     enum: NodeCategory,
     example: NodeCategory.COMMUNICATION,
   })
@@ -14,15 +22,15 @@ export class NodeSearchFilters {
   category?: NodeCategory;
 
   @ApiPropertyOptional({
-    description: 'Search by node type name or keywords',
-    example: 'http request',
+    description: "Search by node type name or keywords",
+    example: "http request",
   })
   @IsOptional()
   @IsString()
   search?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by built-in vs custom nodes',
+    description: "Filter by built-in vs custom nodes",
     example: false,
   })
   @IsOptional()
@@ -31,7 +39,7 @@ export class NodeSearchFilters {
   isBuiltIn?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter nodes that require credentials',
+    description: "Filter nodes that require credentials",
     example: true,
   })
   @IsOptional()
@@ -40,15 +48,15 @@ export class NodeSearchFilters {
   requiresCredentials?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by plugin package ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: "Filter by plugin package ID",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
   @IsOptional()
   @IsString()
   pluginPackageId?: string;
 
   @ApiPropertyOptional({
-    description: 'Number of results to return',
+    description: "Number of results to return",
     example: 50,
     minimum: 1,
     maximum: 100,
@@ -61,7 +69,7 @@ export class NodeSearchFilters {
   limit?: number;
 
   @ApiPropertyOptional({
-    description: 'Number of results to skip',
+    description: "Number of results to skip",
     example: 0,
     minimum: 0,
   })

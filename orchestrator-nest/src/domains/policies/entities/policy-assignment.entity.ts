@@ -7,41 +7,41 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Policy } from './policy.entity';
+} from "typeorm";
+import { Policy } from "./policy.entity";
 
-export type AssigneeType = 'user' | 'role' | 'group';
+export type AssigneeType = "user" | "role" | "group";
 
-@Entity('policy_assignments')
-@Index(['policyId', 'assigneeType', 'assigneeId'], { unique: true })
-@Index(['assigneeType', 'assigneeId'])
-@Index(['tenantId', 'assigneeType'])
+@Entity("policy_assignments")
+@Index(["policyId", "assigneeType", "assigneeId"], { unique: true })
+@Index(["assigneeType", "assigneeId"])
+@Index(["tenantId", "assigneeType"])
 export class PolicyAssignment {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
-  @Column('uuid')
+  @Column("uuid")
   policyId: string;
 
   @Column({
-    type: 'enum',
-    enum: ['user', 'role', 'group'],
+    type: "enum",
+    enum: ["user", "role", "group"],
   })
   assigneeType: AssigneeType;
 
-  @Column('uuid')
+  @Column("uuid")
   assigneeId: string; // User ID, Role ID, or Group ID
 
-  @Column('uuid')
+  @Column("uuid")
   assignedBy: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   expiresAt: Date;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   metadata: any;
 
   @CreateDateColumn()
@@ -50,7 +50,7 @@ export class PolicyAssignment {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => Policy, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'policyId' })
+  @ManyToOne(() => Policy, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "policyId" })
   policy: Policy;
 }

@@ -7,37 +7,37 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-} from 'typeorm';
-import { NodeVersion } from './node-version.entity';
-import { PluginPackage } from './plugin-package.entity';
+} from "typeorm";
+import { NodeVersion } from "./node-version.entity";
+import { PluginPackage } from "./plugin-package.entity";
 
 export enum NodeTypeEnum {
-  ACTION = 'action',
-  TRIGGER = 'trigger',
-  WEBHOOK = 'webhook',
+  ACTION = "action",
+  TRIGGER = "trigger",
+  WEBHOOK = "webhook",
 }
 
 export enum NodeCategory {
-  COMMUNICATION = 'communication',
-  DATA = 'data',
-  FILE = 'file',
-  PRODUCTIVITY = 'productivity',
-  ANALYTICS = 'analytics',
-  MARKETING = 'marketing',
-  SALES = 'sales',
-  DEVELOPMENT = 'development',
-  SOCIAL = 'social',
-  FINANCE = 'finance',
-  UTILITY = 'utility',
-  AI = 'ai',
+  COMMUNICATION = "communication",
+  DATA = "data",
+  FILE = "file",
+  PRODUCTIVITY = "productivity",
+  ANALYTICS = "analytics",
+  MARKETING = "marketing",
+  SALES = "sales",
+  DEVELOPMENT = "development",
+  SOCIAL = "social",
+  FINANCE = "finance",
+  UTILITY = "utility",
+  AI = "ai",
 }
 
-@Entity('node_types')
-@Index(['name', 'isActive'])
-@Index(['category', 'isActive'])
-@Index(['nodeType', 'isActive'])
+@Entity("node_types")
+@Index(["name", "isActive"])
+@Index(["category", "isActive"])
+@Index(["nodeType", "isActive"])
 export class NodeType {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true, length: 100 })
@@ -46,36 +46,36 @@ export class NodeType {
   @Column({ length: 255 })
   displayName: string; // e.g., 'HTTP Request', 'Slack', 'Google Sheets'
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   description: string;
 
   @Column({ nullable: true })
   icon: string; // Icon URL or base64
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: NodeTypeEnum,
     default: NodeTypeEnum.ACTION,
   })
   nodeType: NodeTypeEnum;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: NodeCategory,
     default: NodeCategory.UTILITY,
   })
   category: NodeCategory;
 
-  @Column('jsonb')
+  @Column("jsonb")
   definition: any; // Node definition schema
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   properties: any; // Node properties schema
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   credentials: any; // Required credential types
 
-  @Column('simple-array', { nullable: true })
+  @Column("simple-array", { nullable: true })
   keywords: string[]; // Search keywords
 
   @Column({ default: true })
@@ -90,18 +90,18 @@ export class NodeType {
   @Column({ default: false })
   requiresCredentials: boolean;
 
-  @Column('uuid', { nullable: true })
+  @Column("uuid", { nullable: true })
   pluginPackageId: string;
 
   @ManyToOne(() => PluginPackage, { nullable: true })
-  @JoinColumn({ name: 'pluginPackageId' })
+  @JoinColumn({ name: "pluginPackageId" })
   pluginPackage: PluginPackage;
 
-  @Column('uuid', { nullable: true })
+  @Column("uuid", { nullable: true })
   currentVersionId: string;
 
   @ManyToOne(() => NodeVersion, { nullable: true })
-  @JoinColumn({ name: 'currentVersionId' })
+  @JoinColumn({ name: "currentVersionId" })
   currentVersion: NodeVersion;
 
   @CreateDateColumn()
@@ -111,36 +111,36 @@ export class NodeType {
   updatedAt: Date;
 
   // Version information
-  @Column({ default: '1.0.0' })
+  @Column({ default: "1.0.0" })
   version: string;
 
   @Column({ nullable: true })
   minNodeVersion: string; // Minimum Node.js version required
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   codex: any; // Additional metadata for AI/ML features
 
-  @Column('simple-array', { nullable: true })
+  @Column("simple-array", { nullable: true })
   supportedAuthTypes: string[]; // Supported authentication types
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   webhookConfig: any; // Webhook-specific configuration
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   triggerConfig: any; // Trigger-specific configuration
 
   @Column({ default: 0 })
   downloadCount: number;
 
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
+  @Column({ type: "decimal", precision: 3, scale: 2, default: 0 })
   rating: number;
 
   @Column({ default: 0 })
   ratingCount: number;
 
-  @Column('uuid', { nullable: true })
+  @Column("uuid", { nullable: true })
   createdBy: string;
 
-  @Column('uuid', { nullable: true })
+  @Column("uuid", { nullable: true })
   updatedBy: string;
 }

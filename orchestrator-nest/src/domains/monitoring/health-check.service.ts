@@ -1,21 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { HealthCheck } from './entities/health-check.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { HealthCheck } from "./entities/health-check.entity";
 
 @Injectable()
 export class HealthCheckService {
   constructor(
     @InjectRepository(HealthCheck)
     private healthCheckRepository: Repository<HealthCheck>,
-  ) { }
+  ) {}
 
   /**
    * Get overall system health status
    */
   async getSystemHealth(): Promise<any> {
     const checks = await this.performHealthChecks();
-    const overallStatus = checks.every(check => check.status === 'healthy') ? 'healthy' : 'unhealthy';
+    const overallStatus = checks.every((check) => check.status === "healthy")
+      ? "healthy"
+      : "unhealthy";
 
     return {
       status: overallStatus,
@@ -38,7 +40,7 @@ export class HealthCheckService {
     const systemHealth = await this.getSystemHealth();
     const recentChecks = await this.healthCheckRepository.find({
       where: { tenantId },
-      order: { timestamp: 'DESC' },
+      order: { timestamp: "DESC" },
       take: 50,
     });
 
@@ -80,19 +82,20 @@ export class HealthCheckService {
 
     try {
       // Simple query to test database connectivity
-      await this.healthCheckRepository.query('SELECT 1');
+      await this.healthCheckRepository.query("SELECT 1");
       const responseTime = Date.now() - startTime;
 
       return {
-        name: 'database',
-        status: responseTime < 1000 ? 'healthy' : 'degraded',
+        name: "database",
+        status: responseTime < 1000 ? "healthy" : "degraded",
         responseTime,
-        message: responseTime < 1000 ? 'Database is responsive' : 'Database is slow',
+        message:
+          responseTime < 1000 ? "Database is responsive" : "Database is slow",
       };
     } catch (error) {
       return {
-        name: 'database',
-        status: 'unhealthy',
+        name: "database",
+        status: "unhealthy",
         responseTime: Date.now() - startTime,
         message: `Database error: ${error.message}`,
       };
@@ -108,19 +111,19 @@ export class HealthCheckService {
     const totalMemoryMB = memoryUsage.heapTotal / 1024 / 1024;
     const memoryUsagePercent = (usedMemoryMB / totalMemoryMB) * 100;
 
-    let status = 'healthy';
-    let message = 'Memory usage is normal';
+    let status = "healthy";
+    let message = "Memory usage is normal";
 
     if (memoryUsagePercent > 90) {
-      status = 'unhealthy';
-      message = 'Memory usage is critically high';
+      status = "unhealthy";
+      message = "Memory usage is critically high";
     } else if (memoryUsagePercent > 75) {
-      status = 'degraded';
-      message = 'Memory usage is high';
+      status = "degraded";
+      message = "Memory usage is high";
     }
 
     return {
-      name: 'memory',
+      name: "memory",
       status,
       responseTime: 0,
       message,
@@ -139,19 +142,19 @@ export class HealthCheckService {
     // Mock disk space check - in real implementation, would check actual disk usage
     const diskUsagePercent = Math.random() * 100;
 
-    let status = 'healthy';
-    let message = 'Disk space is sufficient';
+    let status = "healthy";
+    let message = "Disk space is sufficient";
 
     if (diskUsagePercent > 95) {
-      status = 'unhealthy';
-      message = 'Disk space is critically low';
+      status = "unhealthy";
+      message = "Disk space is critically low";
     } else if (diskUsagePercent > 85) {
-      status = 'degraded';
-      message = 'Disk space is getting low';
+      status = "degraded";
+      message = "Disk space is getting low";
     }
 
     return {
-      name: 'disk_space',
+      name: "disk_space",
       status,
       responseTime: 0,
       message,
@@ -166,26 +169,28 @@ export class HealthCheckService {
    */
   private async checkExternalServices(): Promise<any> {
     // Mock external services check
-    const services = ['redis', 'email_service', 'notification_service'];
+    const services = ["redis", "email_service", "notification_service"];
     const failedServices = [];
 
     // Simulate some service checks
     for (const service of services) {
-      if (Math.random() > 0.95) { // 5% chance of failure
+      if (Math.random() > 0.95) {
+        // 5% chance of failure
         failedServices.push(service);
       }
     }
 
-    let status = 'healthy';
-    let message = 'All external services are healthy';
+    let status = "healthy";
+    let message = "All external services are healthy";
 
     if (failedServices.length > 0) {
-      status = failedServices.length === services.length ? 'unhealthy' : 'degraded';
-      message = `Failed services: ${failedServices.join(', ')}`;
+      status =
+        failedServices.length === services.length ? "unhealthy" : "degraded";
+      message = `Failed services: ${failedServices.join(", ")}`;
     }
 
     return {
-      name: 'external_services',
+      name: "external_services",
       status,
       responseTime: 0,
       message,
@@ -231,7 +236,7 @@ export class HealthCheckService {
   ): Promise<HealthCheck[]> {
     return this.healthCheckRepository.find({
       where: { tenantId, checkName },
-      order: { timestamp: 'DESC' },
+      order: { timestamp: "DESC" },
       take: limit,
     });
   }
@@ -256,7 +261,9 @@ export class HealthCheckService {
 
     if (healthChecks.length === 0) return 100;
 
-    const healthyChecks = healthChecks.filter(check => check.status === 'healthy');
+    const healthyChecks = healthChecks.filter(
+      (check) => check.status === "healthy",
+    );
     return (healthyChecks.length / healthChecks.length) * 100;
   }
 }

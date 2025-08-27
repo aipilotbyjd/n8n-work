@@ -1,25 +1,34 @@
-import { Injectable } from '@nestjs/common';
-import { CreateWorkflowDto } from './dto/create-workflow.dto';
+import { Injectable } from "@nestjs/common";
+import { CreateWorkflowDto } from "./dto/create-workflow.dto";
 
 @Injectable()
 export class WorkflowValidationService {
-  validateWorkflow(workflow: CreateWorkflowDto | { nodes: any[]; connections?: any[]; edges?: any[] }): { valid: boolean; errors: string[] } {
+  validateWorkflow(
+    workflow:
+      | CreateWorkflowDto
+      | { nodes: any[]; connections?: any[]; edges?: any[] },
+  ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Basic validation
     if (!workflow.nodes || workflow.nodes.length === 0) {
-      errors.push('Workflow must have at least one node');
+      errors.push("Workflow must have at least one node");
     }
 
     // Validate node connections
-    const workflowConnections = (workflow as any).connections || (workflow as any).edges || [];
+    const workflowConnections =
+      (workflow as any).connections || (workflow as any).edges || [];
     if (workflowConnections && workflowConnections.length > 0) {
       for (const connection of workflowConnections) {
         const sourceNodeId = connection.sourceNodeId || connection.fromNode;
         const targetNodeId = connection.targetNodeId || connection.toNode;
-        
-        const sourceExists = workflow.nodes.some(node => node.id === sourceNodeId);
-        const targetExists = workflow.nodes.some(node => node.id === targetNodeId);
+
+        const sourceExists = workflow.nodes.some(
+          (node) => node.id === sourceNodeId,
+        );
+        const targetExists = workflow.nodes.some(
+          (node) => node.id === targetNodeId,
+        );
 
         if (!sourceExists) {
           errors.push(`Source node ${sourceNodeId} not found`);
@@ -31,30 +40,31 @@ export class WorkflowValidationService {
     }
 
     // Check for circular dependencies
-    const connectionsList = (workflow as any).connections || (workflow as any).edges || [];
+    const connectionsList =
+      (workflow as any).connections || (workflow as any).edges || [];
     if (this.hasCircularDependency(workflow.nodes, connectionsList)) {
-      errors.push('Workflow contains circular dependencies');
+      errors.push("Workflow contains circular dependencies");
     }
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   private hasCircularDependency(nodes: any[], connections: any[]): boolean {
     // Simple cycle detection using DFS
     const graph = new Map<string, string[]>();
-    
+
     // Build adjacency list
     for (const node of nodes) {
       graph.set(node.id, []);
     }
-    
+
     for (const connection of connections) {
       const sourceId = connection.sourceNodeId || connection.fromNode;
       const targetId = connection.targetNodeId || connection.toNode;
-      
+
       if (sourceId && targetId) {
         const targets = graph.get(sourceId) || [];
         targets.push(targetId);

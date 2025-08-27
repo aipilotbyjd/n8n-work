@@ -1,12 +1,12 @@
-import { Module } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { JwtModule } from '@nestjs/jwt';
-import { WorkflowWebSocketGateway } from './workflow-websocket.gateway';
-import { WebSocketService } from './websocket.service';
-import { WorkflowModule } from '../workflow/workflow.module';
-import { ExecutionModule } from '../execution/execution.module';
-import { AuthModule } from '../auth/auth.module';
+import { Module } from "@nestjs/common";
+import { EventEmitterModule } from "@nestjs/event-emitter";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { JwtModule } from "@nestjs/jwt";
+import { WorkflowWebSocketGateway } from "./workflow-websocket.gateway";
+import { WebSocketService } from "./websocket.service";
+import { WorkflowModule } from "../workflow/workflow.module";
+import { ExecutionModule } from "../execution/execution.module";
+import { AuthModule } from "../auth/auth.module";
 
 @Module({
   imports: [
@@ -16,7 +16,7 @@ import { AuthModule } from '../auth/auth.module';
       // Set this to `true` to use wildcards
       wildcard: false,
       // The delimiter used to segment namespaces
-      delimiter: '.',
+      delimiter: ".",
       // Set this to `true` if you want to emit the newListener event
       newListener: false,
       // Set this to `true` if you want to emit the removeListener event
@@ -33,20 +33,14 @@ import { AuthModule } from '../auth/auth.module';
       limit: 100, // Maximum number of requests within TTL
     }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'default-secret',
-      signOptions: { expiresIn: '24h' },
+      secret: process.env.JWT_SECRET || "default-secret",
+      signOptions: { expiresIn: "24h" },
     }),
     WorkflowModule,
     ExecutionModule,
     AuthModule,
   ],
-  providers: [
-    WorkflowWebSocketGateway,
-    WebSocketService,
-  ],
-  exports: [
-    WorkflowWebSocketGateway,
-    WebSocketService,
-  ],
+  providers: [WorkflowWebSocketGateway, WebSocketService],
+  exports: [WorkflowWebSocketGateway, WebSocketService],
 })
 export class WebSocketModule {}

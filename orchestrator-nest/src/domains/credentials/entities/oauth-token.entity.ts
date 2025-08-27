@@ -6,43 +6,43 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm';
-import { Credential } from './credential.entity';
+} from "typeorm";
+import { Credential } from "./credential.entity";
 
-@Entity('oauth_tokens')
+@Entity("oauth_tokens")
 export class OAuthToken {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   credentialId: string;
 
   @OneToOne(() => Credential)
-  @JoinColumn({ name: 'credentialId' })
+  @JoinColumn({ name: "credentialId" })
   credential: Credential;
 
-  @Column('text')
+  @Column("text")
   accessToken: string; // Encrypted
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   refreshToken: string; // Encrypted
 
   @Column({ nullable: true })
   tokenType: string; // Usually 'Bearer'
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   expiresIn: number; // Seconds until expiration
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   expiresAt: Date;
 
-  @Column('simple-array', { nullable: true })
+  @Column("simple-array", { nullable: true })
   scopes: string[];
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   additionalData: any; // Any additional OAuth data
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
   @CreateDateColumn()

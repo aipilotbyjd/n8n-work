@@ -1,17 +1,24 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
-@Entity('marketplace_reviews')
+@Entity("marketplace_reviews")
 export class MarketplaceReview {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
-  @Column('int', { default: 5 })
+  @Column("int", { default: 5 })
   rating: number;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   comment: string;
 
   @Column()
@@ -20,7 +27,7 @@ export class MarketplaceReview {
   @Column()
   userName: string;
 
-  @ManyToOne(() => MarketplaceItem, item => item.reviews)
+  @ManyToOne(() => MarketplaceItem, (item) => item.reviews)
   item: MarketplaceItem;
 
   @Column()
@@ -37,4 +44,4 @@ export class MarketplaceReview {
 }
 
 // Import at the end to avoid circular dependencies
-import { MarketplaceItem } from './marketplace-item.entity';
+import { MarketplaceItem } from "./marketplace-item.entity";

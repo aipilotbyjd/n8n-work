@@ -1,16 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ConfigService } from '@nestjs/config';
-import { Webhook, WebhookStatus, AuthenticationType } from './entities/webhook.entity';
-import { WebhookExecution, ExecutionStatus } from './entities/webhook-execution.entity';
-import { CreateWebhookDto } from './dto/create-webhook.dto';
-import { UpdateWebhookDto } from './dto/update-webhook.dto';
-import { WebhookResponseDto } from './dto/webhook-response.dto';
-import { ProcessWebhookDto } from './dto/process-webhook.dto';
-import { AuditLogService } from '../audit/audit-log.service';
-import * as crypto from 'crypto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { ConfigService } from "@nestjs/config";
+import {
+  Webhook,
+  WebhookStatus,
+  AuthenticationType,
+} from "./entities/webhook.entity";
+import {
+  WebhookExecution,
+  ExecutionStatus,
+} from "./entities/webhook-execution.entity";
+import { CreateWebhookDto } from "./dto/create-webhook.dto";
+import { UpdateWebhookDto } from "./dto/update-webhook.dto";
+import { WebhookResponseDto } from "./dto/webhook-response.dto";
+import { ProcessWebhookDto } from "./dto/process-webhook.dto";
+import { AuditLogService } from "../audit/audit-log.service";
+import * as crypto from "crypto";
 
 @Injectable()
 export class WebhooksService {
@@ -24,14 +36,16 @@ export class WebhooksService {
     private readonly eventEmitter: EventEmitter2,
     private readonly configService: ConfigService,
     private readonly auditService: AuditLogService,
-  ) { }
+  ) {}
 
   async create(
     createWebhookDto: CreateWebhookDto,
     tenantId: string,
     userId: string,
   ): Promise<WebhookResponseDto> {
-    this.logger.log(`Creating webhook for workflow ${createWebhookDto.workflowId}`);
+    this.logger.log(
+      `Creating webhook for workflow ${createWebhookDto.workflowId}`,
+    );
 
     const webhookPath = this.generateWebhookPath();
     const webhookUrl = this.buildWebhookUrl(webhookPath);
@@ -49,20 +63,20 @@ export class WebhooksService {
 
     const savedWebhook = await this.webhookRepository.save(webhook);
 
-    this.eventEmitter.emit('webhook.created', {
+    this.eventEmitter.emit("webhook.created", {
       webhook: savedWebhook,
       tenantId,
       userId,
     });
 
     await this.auditService.log({
-      action: 'webhook.created',
-      resourceType: 'webhook',
+      action: "webhook.created",
+      resourceType: "webhook",
       resourceId: savedWebhook.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: {
         workflowId: savedWebhook.workflowId,
         path: savedWebhook.path,
@@ -75,11 +89,11 @@ export class WebhooksService {
   async findAll(tenantId: string): Promise<WebhookResponseDto[]> {
     const webhooks = await this.webhookRepository.find({
       where: { tenantId },
-      relations: ['createdBy', 'updatedBy'],
-      order: { createdAt: 'DESC' },
+      relations: ["createdBy", "updatedBy"],
+      order: { createdAt: "DESC" },
     });
 
-    return webhooks.map(webhook => this.toResponseDto(webhook));
+    return webhooks.map((webhook) => this.toResponseDto(webhook));
   }
 
   async findOne(id: string, tenantId: string): Promise<WebhookResponseDto> {
@@ -90,7 +104,7 @@ export class WebhooksService {
   async findByPath(path: string): Promise<Webhook> {
     const webhook = await this.webhookRepository.findOne({
       where: { path, status: WebhookStatus.ACTIVE },
-      relations: ['workflow'],
+      relations: ["workflow"],
     });
 
     if (!webhook) {
@@ -108,8 +122,10 @@ export class WebhooksService {
   ): Promise<WebhookResponseDto> {
     const webhook = await this.getWebhookEntity(id, tenantId);
 
-    if (updateWebhookDto.authenticationType &&
-      updateWebhookDto.authenticationType !== webhook.authenticationType) {
+    if (
+      updateWebhookDto.authenticationType &&
+      updateWebhookDto.authenticationType !== webhook.authenticationType
+    ) {
       webhook.secret = this.generateWebhookSecret();
     }
 
@@ -119,20 +135,20 @@ export class WebhooksService {
 
     const savedWebhook = await this.webhookRepository.save(webhook);
 
-    this.eventEmitter.emit('webhook.updated', {
+    this.eventEmitter.emit("webhook.updated", {
       webhook: savedWebhook,
       tenantId,
       userId,
     });
 
     await this.auditService.log({
-      action: 'webhook.updated',
-      resourceType: 'webhook',
+      action: "webhook.updated",
+      resourceType: "webhook",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: updateWebhookDto,
     });
 
@@ -144,20 +160,20 @@ export class WebhooksService {
 
     await this.webhookRepository.remove(webhook);
 
-    this.eventEmitter.emit('webhook.deleted', {
+    this.eventEmitter.emit("webhook.deleted", {
       webhookId: id,
       tenantId,
       userId,
     });
 
     await this.auditService.log({
-      action: 'webhook.deleted',
-      resourceType: 'webhook',
+      action: "webhook.deleted",
+      resourceType: "webhook",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       oldValues: {
         workflowId: webhook.workflowId,
         path: webhook.path,
@@ -175,13 +191,16 @@ export class WebhooksService {
       const webhook = await this.findByPath(path);
 
       if (webhook.status !== WebhookStatus.ACTIVE) {
-        throw new BadRequestException('Webhook is not active');
+        throw new BadRequestException("Webhook is not active");
       }
 
       if (webhook.rateLimitPerMinute) {
-        const canProceed = await this.checkRateLimit(webhook.id, webhook.rateLimitPerMinute);
+        const canProceed = await this.checkRateLimit(
+          webhook.id,
+          webhook.rateLimitPerMinute,
+        );
         if (!canProceed) {
-          throw new BadRequestException('Rate limit exceeded');
+          throw new BadRequestException("Rate limit exceeded");
         }
       }
 
@@ -192,7 +211,7 @@ export class WebhooksService {
       );
 
       if (!isAuthenticated) {
-        throw new BadRequestException('Authentication failed');
+        throw new BadRequestException("Authentication failed");
       }
 
       const execution = this.executionRepository.create({
@@ -211,7 +230,7 @@ export class WebhooksService {
       webhook.lastTriggeredAt = new Date();
       await this.webhookRepository.save(webhook);
 
-      this.eventEmitter.emit('webhook.triggered', {
+      this.eventEmitter.emit("webhook.triggered", {
         webhook,
         execution: savedExecution,
         data: processDto.body,
@@ -221,22 +240,25 @@ export class WebhooksService {
       return {
         success: true,
         executionId: savedExecution.id,
-        message: 'Webhook processed successfully',
+        message: "Webhook processed successfully",
       };
     } catch (error) {
       this.logger.error(`Webhook processing failed for path ${path}:`, error);
 
       return {
         success: false,
-        message: error.message || 'Webhook processing failed',
+        message: error.message || "Webhook processing failed",
       };
     }
   }
 
-  private async getWebhookEntity(id: string, tenantId: string): Promise<Webhook> {
+  private async getWebhookEntity(
+    id: string,
+    tenantId: string,
+  ): Promise<Webhook> {
     const webhook = await this.webhookRepository.findOne({
       where: { id, tenantId },
-      relations: ['createdBy', 'updatedBy'],
+      relations: ["createdBy", "updatedBy"],
     });
 
     if (!webhook) {
@@ -247,19 +269,24 @@ export class WebhooksService {
   }
 
   private generateWebhookPath(): string {
-    return crypto.randomBytes(16).toString('hex');
+    return crypto.randomBytes(16).toString("hex");
   }
 
   private generateWebhookSecret(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   private buildWebhookUrl(path: string): string {
-    const baseUrl = this.configService.get<string>('WEBHOOK_BASE_URL') || 'http://localhost:3000';
+    const baseUrl =
+      this.configService.get<string>("WEBHOOK_BASE_URL") ||
+      "http://localhost:3000";
     return `${baseUrl}/webhooks/${path}`;
   }
 
-  private async checkRateLimit(webhookId: string, limitPerMinute: number): Promise<boolean> {
+  private async checkRateLimit(
+    webhookId: string,
+    limitPerMinute: number,
+  ): Promise<boolean> {
     return true;
   }
 
@@ -280,18 +307,21 @@ export class WebhooksService {
       case AuthenticationType.SIGNATURE:
         return this.validateSignature(
           processDto.body,
-          headers['x-signature'] || headers['x-hub-signature-256'],
+          headers["x-signature"] || headers["x-hub-signature-256"],
           webhook.secret,
         );
 
       case AuthenticationType.BASIC:
-        const authHeader = headers['authorization'];
-        if (!authHeader?.startsWith('Basic ')) {
+        const authHeader = headers["authorization"];
+        if (!authHeader?.startsWith("Basic ")) {
           return false;
         }
 
-        const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
-        const [username, password] = credentials.split(':');
+        const credentials = Buffer.from(
+          authHeader.slice(6),
+          "base64",
+        ).toString();
+        const [username, password] = credentials.split(":");
 
         return (
           username === webhook.authenticationData?.username &&
@@ -313,17 +343,18 @@ export class WebhooksService {
     }
 
     try {
-      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
-      const hmac = crypto.createHmac('sha256', secret);
+      const payloadString =
+        typeof payload === "string" ? payload : JSON.stringify(payload);
+      const hmac = crypto.createHmac("sha256", secret);
       hmac.update(payloadString);
-      const expectedSignature = 'sha256=' + hmac.digest('hex');
+      const expectedSignature = "sha256=" + hmac.digest("hex");
 
       return crypto.timingSafeEqual(
         Buffer.from(signature),
         Buffer.from(expectedSignature),
       );
     } catch (error) {
-      this.logger.error('Signature validation error:', error);
+      this.logger.error("Signature validation error:", error);
       return false;
     }
   }

@@ -1,32 +1,39 @@
-import { IsString, IsOptional, IsEnum, IsObject, IsBoolean, IsArray } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NodeCategory } from '../entities/node-type.entity';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsObject,
+  IsBoolean,
+  IsArray,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { NodeCategory } from "../entities/node-type.entity";
 
 export class CreateNodeDto {
   @ApiProperty({
-    description: 'Unique name for the node type',
-    example: 'custom-http-request',
+    description: "Unique name for the node type",
+    example: "custom-http-request",
   })
   @IsString()
   name: string;
 
   @ApiProperty({
-    description: 'Display name for the node',
-    example: 'Custom HTTP Request',
+    description: "Display name for the node",
+    example: "Custom HTTP Request",
   })
   @IsString()
   displayName: string;
 
   @ApiPropertyOptional({
-    description: 'Description of the node functionality',
-    example: 'Makes HTTP requests with custom headers and authentication',
+    description: "Description of the node functionality",
+    example: "Makes HTTP requests with custom headers and authentication",
   })
   @IsOptional()
   @IsString()
   description?: string;
 
   @ApiProperty({
-    description: 'Node category',
+    description: "Node category",
     enum: NodeCategory,
     example: NodeCategory.COMMUNICATION,
   })
@@ -34,7 +41,7 @@ export class CreateNodeDto {
   category: NodeCategory;
 
   @ApiPropertyOptional({
-    description: 'Node execution code',
+    description: "Node execution code",
     example: 'function execute(input) { return { output: "Hello World" }; }',
   })
   @IsOptional()
@@ -42,16 +49,16 @@ export class CreateNodeDto {
   code?: string;
 
   @ApiProperty({
-    description: 'Node definition schema',
-    type: 'object',
+    description: "Node definition schema",
+    type: "object",
     example: {
-      inputs: ['main'],
-      outputs: ['main'],
+      inputs: ["main"],
+      outputs: ["main"],
       properties: [
         {
-          displayName: 'URL',
-          name: 'url',
-          type: 'string',
+          displayName: "URL",
+          name: "url",
+          type: "string",
           required: true,
         },
       ],
@@ -61,18 +68,18 @@ export class CreateNodeDto {
   definition: any;
 
   @ApiPropertyOptional({
-    description: 'Node icon identifier',
-    example: 'fa:globe',
+    description: "Node icon identifier",
+    example: "fa:globe",
   })
   @IsOptional()
   @IsString()
   icon?: string;
 
   @ApiPropertyOptional({
-    description: 'Node keywords for search',
-    type: 'array',
-    items: { type: 'string' },
-    example: ['http', 'request', 'api'],
+    description: "Node keywords for search",
+    type: "array",
+    items: { type: "string" },
+    example: ["http", "request", "api"],
   })
   @IsOptional()
   @IsArray()
@@ -80,15 +87,15 @@ export class CreateNodeDto {
   keywords?: string[];
 
   @ApiPropertyOptional({
-    description: 'Node documentation URL',
-    example: 'https://docs.example.com/nodes/custom-http',
+    description: "Node documentation URL",
+    example: "https://docs.example.com/nodes/custom-http",
   })
   @IsOptional()
   @IsString()
   documentationUrl?: string;
 
   @ApiPropertyOptional({
-    description: 'Whether node requires credentials',
+    description: "Whether node requires credentials",
     example: true,
   })
   @IsOptional()
@@ -96,10 +103,10 @@ export class CreateNodeDto {
   requiresCredentials?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Supported credential types',
-    type: 'array',
-    items: { type: 'string' },
-    example: ['httpBasicAuth', 'httpHeaderAuth'],
+    description: "Supported credential types",
+    type: "array",
+    items: { type: "string" },
+    example: ["httpBasicAuth", "httpHeaderAuth"],
   })
   @IsOptional()
   @IsArray()

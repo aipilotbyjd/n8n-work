@@ -1,5 +1,5 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { Request } from 'express';
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import { Request } from "express";
 
 export interface AuthenticatedUser {
   id: string;
@@ -15,13 +15,13 @@ export interface AuthenticatedUser {
 
 /**
  * Decorator to extract the current authenticated user from the request
- * 
+ *
  * Usage:
  * @Get('profile')
  * getProfile(@CurrentUser() user: AuthenticatedUser) {
  *   return user;
  * }
- * 
+ *
  * // Get specific property
  * @Get('id')
  * getUserId(@CurrentUser('id') userId: string) {

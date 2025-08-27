@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Alert } from './entities/alert.entity';
-import { AuditLogService } from '../audit/audit-log.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Alert } from "./entities/alert.entity";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class AlertingService {
@@ -23,17 +23,18 @@ export class AlertingService {
     severity?: string,
     limit: number = 50,
   ): Promise<Alert[]> {
-    const query = this.alertRepository.createQueryBuilder('alert')
-      .where('alert.tenantId = :tenantId', { tenantId })
-      .orderBy('alert.createdAt', 'DESC')
+    const query = this.alertRepository
+      .createQueryBuilder("alert")
+      .where("alert.tenantId = :tenantId", { tenantId })
+      .orderBy("alert.createdAt", "DESC")
       .limit(limit);
 
     if (status) {
-      query.andWhere('alert.status = :status', { status });
+      query.andWhere("alert.status = :status", { status });
     }
 
     if (severity) {
-      query.andWhere('alert.severity = :severity', { severity });
+      query.andWhere("alert.severity = :severity", { severity });
     }
 
     return query.getMany();
@@ -51,9 +52,9 @@ export class AlertingService {
       tenantId,
       title: createAlertDto.title,
       description: createAlertDto.description,
-      severity: createAlertDto.severity || 'medium',
-      status: 'active',
-      alertType: createAlertDto.type || 'system',
+      severity: createAlertDto.severity || "medium",
+      status: "active",
+      alertType: createAlertDto.type || "system",
       conditions: createAlertDto.conditions,
       actions: createAlertDto.actions,
       metadata: createAlertDto.metadata,
@@ -63,7 +64,7 @@ export class AlertingService {
     const savedAlert = await this.alertRepository.save(alert);
 
     // Emit alert rule created event
-    this.eventEmitter.emit('alert.rule.created', {
+    this.eventEmitter.emit("alert.rule.created", {
       tenantId,
       alertId: savedAlert.id,
       createdBy: userId,
@@ -71,8 +72,8 @@ export class AlertingService {
 
     // Log audit event
     await this.auditLogService.log(
-      'alert.rule.created',
-      'alert',
+      "alert.rule.created",
+      "alert",
       savedAlert.id,
       userId,
       { title: savedAlert.title, severity: savedAlert.severity },
@@ -94,17 +95,17 @@ export class AlertingService {
     });
 
     if (!alert) {
-      throw new NotFoundException('Alert not found');
+      throw new NotFoundException("Alert not found");
     }
 
-    alert.status = 'acknowledged';
+    alert.status = "acknowledged";
     alert.acknowledgedBy = userId;
     alert.acknowledgedAt = new Date();
 
     const savedAlert = await this.alertRepository.save(alert);
 
     // Emit alert acknowledged event
-    this.eventEmitter.emit('alert.acknowledged', {
+    this.eventEmitter.emit("alert.acknowledged", {
       tenantId,
       alertId: savedAlert.id,
       acknowledgedBy: userId,
@@ -112,8 +113,8 @@ export class AlertingService {
 
     // Log audit event
     await this.auditLogService.log(
-      'alert.acknowledged',
-      'alert',
+      "alert.acknowledged",
+      "alert",
       savedAlert.id,
       userId,
       { title: savedAlert.title },
@@ -135,17 +136,17 @@ export class AlertingService {
     });
 
     if (!alert) {
-      throw new NotFoundException('Alert not found');
+      throw new NotFoundException("Alert not found");
     }
 
-    alert.status = 'resolved';
+    alert.status = "resolved";
     alert.resolvedBy = userId;
     alert.resolvedAt = new Date();
 
     const savedAlert = await this.alertRepository.save(alert);
 
     // Emit alert resolved event
-    this.eventEmitter.emit('alert.resolved', {
+    this.eventEmitter.emit("alert.resolved", {
       tenantId,
       alertId: savedAlert.id,
       resolvedBy: userId,
@@ -153,8 +154,8 @@ export class AlertingService {
 
     // Log audit event
     await this.auditLogService.log({
-      action: 'alert.resolved',
-      resourceType: 'alert',
+      action: "alert.resolved",
+      resourceType: "alert",
       resourceId: savedAlert.id,
       userId,
       tenantId,
@@ -183,7 +184,7 @@ export class AlertingService {
       title: alertData.title,
       description: alertData.description,
       severity: alertData.severity,
-      status: 'active',
+      status: "active",
       alertType: alertData.alertType,
       source: alertData.source,
       metadata: alertData.metadata,
@@ -193,7 +194,7 @@ export class AlertingService {
     const savedAlert = await this.alertRepository.save(alert);
 
     // Emit alert triggered event
-    this.eventEmitter.emit('alert.triggered', {
+    this.eventEmitter.emit("alert.triggered", {
       tenantId,
       alertId: savedAlert.id,
       severity: savedAlert.severity,
@@ -209,19 +210,22 @@ export class AlertingService {
   async checkAlertConditions(tenantId: string, metrics: any): Promise<void> {
     // Get active alert rules
     const alertRules = await this.alertRepository.find({
-      where: { tenantId, status: 'active' },
+      where: { tenantId, status: "active" },
     });
 
     for (const rule of alertRules) {
-      const shouldTrigger = this.evaluateAlertConditions(rule.conditions, metrics);
-      
+      const shouldTrigger = this.evaluateAlertConditions(
+        rule.conditions,
+        metrics,
+      );
+
       if (shouldTrigger) {
         await this.triggerAlert(tenantId, {
           title: `Alert: ${rule.title}`,
           description: rule.description,
           severity: rule.severity,
           alertType: rule.alertType,
-          source: 'system',
+          source: "system",
           metadata: { ruleId: rule.id, metrics },
         });
       }
@@ -240,22 +244,22 @@ export class AlertingService {
       const value = this.getMetricValue(metrics, metric);
 
       switch (operator) {
-        case 'gt':
+        case "gt":
           if (value <= threshold) return false;
           break;
-        case 'gte':
+        case "gte":
           if (value < threshold) return false;
           break;
-        case 'lt':
+        case "lt":
           if (value >= threshold) return false;
           break;
-        case 'lte':
+        case "lte":
           if (value > threshold) return false;
           break;
-        case 'eq':
+        case "eq":
           if (value !== threshold) return false;
           break;
-        case 'ne':
+        case "ne":
           if (value === threshold) return false;
           break;
         default:
@@ -270,7 +274,7 @@ export class AlertingService {
    * Get metric value from metrics object
    */
   private getMetricValue(metrics: any, metricPath: string): number {
-    return metricPath.split('.').reduce((obj, key) => obj?.[key], metrics) || 0;
+    return metricPath.split(".").reduce((obj, key) => obj?.[key], metrics) || 0;
   }
 
   /**
@@ -279,19 +283,19 @@ export class AlertingService {
   async getAlertSummary(tenantId: string): Promise<any> {
     const alerts = await this.alertRepository.find({
       where: { tenantId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
 
     return {
       total: alerts.length,
-      active: alerts.filter(a => a.status === 'active').length,
-      acknowledged: alerts.filter(a => a.status === 'acknowledged').length,
-      resolved: alerts.filter(a => a.status === 'resolved').length,
+      active: alerts.filter((a) => a.status === "active").length,
+      acknowledged: alerts.filter((a) => a.status === "acknowledged").length,
+      resolved: alerts.filter((a) => a.status === "resolved").length,
       bySeverity: {
-        critical: alerts.filter(a => a.severity === 'critical').length,
-        high: alerts.filter(a => a.severity === 'high').length,
-        medium: alerts.filter(a => a.severity === 'medium').length,
-        low: alerts.filter(a => a.severity === 'low').length,
+        critical: alerts.filter((a) => a.severity === "critical").length,
+        high: alerts.filter((a) => a.severity === "high").length,
+        medium: alerts.filter((a) => a.severity === "medium").length,
+        low: alerts.filter((a) => a.severity === "low").length,
       },
       recent: alerts.slice(0, 5),
     };

@@ -7,17 +7,17 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayInit,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards, UseFilters } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { WsExceptionFilter } from '../common/filters/ws-exception.filter';
-import { WorkflowsService } from '../domains/workflows/workflows.service';
-import { ExecutionsService } from '../domains/executions/executions.service';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { JwtService } from '@nestjs/jwt';
-import { AuthUser } from '../auth/interfaces/auth-user.interface';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger, UseGuards, UseFilters } from "@nestjs/common";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { WsExceptionFilter } from "../common/filters/ws-exception.filter";
+import { WorkflowsService } from "../domains/workflows/workflows.service";
+import { ExecutionsService } from "../domains/executions/executions.service";
+import { EventEmitter2, OnEvent } from "@nestjs/event-emitter";
+import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
+import { JwtService } from "@nestjs/jwt";
+import { AuthUser } from "../auth/interfaces/auth-user.interface";
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -26,7 +26,7 @@ interface AuthenticatedSocket extends Socket {
 }
 
 interface SubscriptionRequest {
-  type: 'workflow' | 'execution' | 'logs' | 'metrics' | 'tenant_activity';
+  type: "workflow" | "execution" | "logs" | "metrics" | "tenant_activity";
   resourceId?: string; // workflow_id, execution_id, etc.
   filters?: {
     eventTypes?: string[];
@@ -44,16 +44,17 @@ interface WebSocketMessage {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: process.env.CORS_ORIGINS?.split(",") || ["http://localhost:3000"],
     credentials: true,
   },
-  namespace: '/workflow',
-  transports: ['websocket', 'polling'],
+  namespace: "/workflow",
+  transports: ["websocket", "polling"],
 })
 @UseFilters(WsExceptionFilter)
 @UseGuards(ThrottlerGuard)
 export class WorkflowWebSocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -74,10 +75,10 @@ export class WorkflowWebSocketGateway
     private readonly executionsService: ExecutionsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   afterInit(server: Server) {
-    this.logger.log('WebSocket Gateway initialized');
+    this.logger.log("WebSocket Gateway initialized");
 
     // Set up periodic cleanup and metrics reporting
     setInterval(() => this.cleanupInactiveConnections(), 300000); // 5 minutes
@@ -87,11 +88,14 @@ export class WorkflowWebSocketGateway
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Extract token from query parameters or headers
-      const token = client.handshake.auth?.token || client.handshake.query?.token;
+      const token =
+        client.handshake.auth?.token || client.handshake.query?.token;
 
       if (!token) {
-        this.logger.warn(`Connection rejected: No authentication token provided`);
-        client.emit('error', { message: 'Authentication token required' });
+        this.logger.warn(
+          `Connection rejected: No authentication token provided`,
+        );
+        client.emit("error", { message: "Authentication token required" });
         client.disconnect();
         return;
       }
@@ -100,7 +104,7 @@ export class WorkflowWebSocketGateway
       const userInfo = await this.validateToken(token as string);
       if (!userInfo) {
         this.logger.warn(`Connection rejected: Invalid token`);
-        client.emit('error', { message: 'Invalid authentication token' });
+        client.emit("error", { message: "Invalid authentication token" });
         client.disconnect();
         return;
       }
@@ -120,7 +124,7 @@ export class WorkflowWebSocketGateway
       );
 
       // Send connection confirmation
-      client.emit('connected', {
+      client.emit("connected", {
         clientId: client.id,
         userId: client.userId,
         tenantId: client.tenantId,
@@ -129,11 +133,10 @@ export class WorkflowWebSocketGateway
 
       // Send current tenant stats
       const stats = await this.getTenantStats(client.tenantId);
-      client.emit('tenant_stats', stats);
-
+      client.emit("tenant_stats", stats);
     } catch (error: any) {
       this.logger.error(`Connection error: ${error.message}`, error.stack);
-      client.emit('error', { message: 'Connection failed' });
+      client.emit("error", { message: "Connection failed" });
       client.disconnect();
       this.metrics.errors++;
     }
@@ -145,7 +148,7 @@ export class WorkflowWebSocketGateway
     // Clean up subscriptions
     const clientSubs = this.clientSubscriptions.get(client.id);
     if (clientSubs) {
-      clientSubs.forEach(resourceId => {
+      clientSubs.forEach((resourceId) => {
         const subscribers = this.subscriptions.get(resourceId);
         if (subscribers) {
           subscribers.delete(client.id);
@@ -162,7 +165,7 @@ export class WorkflowWebSocketGateway
     this.metrics.connections--;
   }
 
-  @SubscribeMessage('subscribe')
+  @SubscribeMessage("subscribe")
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 subscriptions per minute
   async handleSubscription(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -172,18 +175,21 @@ export class WorkflowWebSocketGateway
       this.metrics.messagesReceived++;
 
       if (!client.tenantId) {
-        client.emit('error', { message: 'Not authenticated' });
+        client.emit("error", { message: "Not authenticated" });
         return;
       }
 
       // Validate subscription request
       if (!this.isValidSubscriptionType(data.type)) {
-        client.emit('error', { message: 'Invalid subscription type' });
+        client.emit("error", { message: "Invalid subscription type" });
         return;
       }
 
       // Generate subscription key
-      const subscriptionKey = this.generateSubscriptionKey(data, client.tenantId);
+      const subscriptionKey = this.generateSubscriptionKey(
+        data,
+        client.tenantId,
+      );
 
       // Check permissions
       const hasPermission = await this.checkSubscriptionPermission(
@@ -193,7 +199,9 @@ export class WorkflowWebSocketGateway
       );
 
       if (!hasPermission) {
-        client.emit('error', { message: 'Permission denied for this subscription' });
+        client.emit("error", {
+          message: "Permission denied for this subscription",
+        });
         return;
       }
 
@@ -213,7 +221,7 @@ export class WorkflowWebSocketGateway
       );
 
       // Send confirmation
-      client.emit('subscription_confirmed', {
+      client.emit("subscription_confirmed", {
         type: data.type,
         resourceId: data.resourceId,
         subscriptionKey,
@@ -222,15 +230,14 @@ export class WorkflowWebSocketGateway
 
       // Send initial data if available
       await this.sendInitialData(client, data);
-
     } catch (error: any) {
       this.logger.error(`Subscription error: ${error.message}`, error.stack);
-      client.emit('error', { message: 'Subscription failed' });
+      client.emit("error", { message: "Subscription failed" });
       this.metrics.errors++;
     }
   }
 
-  @SubscribeMessage('unsubscribe')
+  @SubscribeMessage("unsubscribe")
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 unsubscriptions per minute
   handleUnsubscription(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -254,27 +261,28 @@ export class WorkflowWebSocketGateway
       this.clientSubscriptions.get(client.id)?.delete(subscriptionKey);
       client.subscriptions?.delete(subscriptionKey);
 
-      this.logger.log(`Client ${client.id} unsubscribed from ${subscriptionKey}`);
+      this.logger.log(
+        `Client ${client.id} unsubscribed from ${subscriptionKey}`,
+      );
 
-      client.emit('unsubscription_confirmed', {
+      client.emit("unsubscription_confirmed", {
         subscriptionKey,
         timestamp: new Date().toISOString(),
       });
-
     } catch (error: any) {
       this.logger.error(`Unsubscription error: ${error.message}`, error.stack);
-      client.emit('error', { message: 'Unsubscription failed' });
+      client.emit("error", { message: "Unsubscription failed" });
       this.metrics.errors++;
     }
   }
 
-  @SubscribeMessage('ping')
+  @SubscribeMessage("ping")
   @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 pings per minute
   handlePing(@ConnectedSocket() client: AuthenticatedSocket) {
-    client.emit('pong', { timestamp: new Date().toISOString() });
+    client.emit("pong", { timestamp: new Date().toISOString() });
   }
 
-  @SubscribeMessage('get_status')
+  @SubscribeMessage("get_status")
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 status requests per minute
   async handleGetStatus(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -284,7 +292,7 @@ export class WorkflowWebSocketGateway
       this.metrics.messagesReceived++;
 
       if (!client.tenantId) {
-        client.emit('error', { message: 'Not authenticated' });
+        client.emit("error", { message: "Not authenticated" });
         return;
       }
 
@@ -300,7 +308,7 @@ export class WorkflowWebSocketGateway
         const mockUser: AuthUser = {
           id: client.userId,
           tenantId: client.tenantId,
-          email: '',
+          email: "",
           roles: [],
           permissions: [],
         };
@@ -310,42 +318,41 @@ export class WorkflowWebSocketGateway
         status = await this.getTenantStats(client.tenantId);
       }
 
-      client.emit('status_response', {
+      client.emit("status_response", {
         ...data,
         status,
         timestamp: new Date().toISOString(),
       });
-
     } catch (error: any) {
       this.logger.error(`Get status error: ${error.message}`, error.stack);
-      client.emit('error', { message: 'Failed to get status' });
+      client.emit("error", { message: "Failed to get status" });
       this.metrics.errors++;
     }
   }
 
   // Event listeners for broadcasting updates
 
-  @OnEvent('workflow.created')
+  @OnEvent("workflow.created")
   async handleWorkflowCreated(payload: any) {
     const subscriptionKey = `workflow:${payload.tenantId}:${payload.workflowId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'workflow_created',
+      type: "workflow_created",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('workflow.updated')
+  @OnEvent("workflow.updated")
   async handleWorkflowUpdated(payload: any) {
     const subscriptionKey = `workflow:${payload.tenantId}:${payload.workflowId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'workflow_updated',
+      type: "workflow_updated",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('execution.started')
+  @OnEvent("execution.started")
   async handleExecutionStarted(payload: any) {
     const subscriptionKeys = [
       `execution:${payload.tenantId}:${payload.executionId}`,
@@ -354,17 +361,17 @@ export class WorkflowWebSocketGateway
     ];
 
     const message = {
-      type: 'execution_started',
+      type: "execution_started",
       payload,
       timestamp: new Date().toISOString(),
     };
 
     await Promise.all(
-      subscriptionKeys.map(key => this.broadcastToSubscribers(key, message)),
+      subscriptionKeys.map((key) => this.broadcastToSubscribers(key, message)),
     );
   }
 
-  @OnEvent('execution.completed')
+  @OnEvent("execution.completed")
   async handleExecutionCompleted(payload: any) {
     const subscriptionKeys = [
       `execution:${payload.tenantId}:${payload.executionId}`,
@@ -373,17 +380,17 @@ export class WorkflowWebSocketGateway
     ];
 
     const message = {
-      type: 'execution_completed',
+      type: "execution_completed",
       payload,
       timestamp: new Date().toISOString(),
     };
 
     await Promise.all(
-      subscriptionKeys.map(key => this.broadcastToSubscribers(key, message)),
+      subscriptionKeys.map((key) => this.broadcastToSubscribers(key, message)),
     );
   }
 
-  @OnEvent('execution.failed')
+  @OnEvent("execution.failed")
   async handleExecutionFailed(payload: any) {
     const subscriptionKeys = [
       `execution:${payload.tenantId}:${payload.executionId}`,
@@ -392,61 +399,61 @@ export class WorkflowWebSocketGateway
     ];
 
     const message = {
-      type: 'execution_failed',
+      type: "execution_failed",
       payload,
       timestamp: new Date().toISOString(),
     };
 
     await Promise.all(
-      subscriptionKeys.map(key => this.broadcastToSubscribers(key, message)),
+      subscriptionKeys.map((key) => this.broadcastToSubscribers(key, message)),
     );
   }
 
-  @OnEvent('step.started')
+  @OnEvent("step.started")
   async handleStepStarted(payload: any) {
     const subscriptionKey = `execution:${payload.tenantId}:${payload.executionId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'step_started',
+      type: "step_started",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('step.completed')
+  @OnEvent("step.completed")
   async handleStepCompleted(payload: any) {
     const subscriptionKey = `execution:${payload.tenantId}:${payload.executionId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'step_completed',
+      type: "step_completed",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('step.failed')
+  @OnEvent("step.failed")
   async handleStepFailed(payload: any) {
     const subscriptionKey = `execution:${payload.tenantId}:${payload.executionId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'step_failed',
+      type: "step_failed",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('log.created')
+  @OnEvent("log.created")
   async handleLogCreated(payload: any) {
     const subscriptionKey = `logs:${payload.tenantId}:${payload.executionId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'log_created',
+      type: "log_created",
       payload,
       timestamp: new Date().toISOString(),
     });
   }
 
-  @OnEvent('metrics.updated')
+  @OnEvent("metrics.updated")
   async handleMetricsUpdated(payload: any) {
     const subscriptionKey = `metrics:${payload.tenantId}`;
     await this.broadcastToSubscribers(subscriptionKey, {
-      type: 'metrics_updated',
+      type: "metrics_updated",
       payload,
       timestamp: new Date().toISOString(),
     });
@@ -459,7 +466,10 @@ export class WorkflowWebSocketGateway
    * @param subscriptionKey The subscription key to broadcast to
    * @param message The message to broadcast
    */
-  private async broadcastToSubscribers(subscriptionKey: string, message: any): Promise<void> {
+  private async broadcastToSubscribers(
+    subscriptionKey: string,
+    message: any,
+  ): Promise<void> {
     const subscribers = this.subscriptions.get(subscriptionKey);
     if (!subscribers || subscribers.size === 0) {
       return;
@@ -467,14 +477,14 @@ export class WorkflowWebSocketGateway
 
     // Send message to all subscribers
     const promises: Promise<void>[] = [];
-    subscribers.forEach(clientId => {
+    subscribers.forEach((clientId) => {
       const client = this.connectedClients.get(clientId);
       if (client) {
         promises.push(
           new Promise<void>((resolve) => {
-            client.emit('update', message);
+            client.emit("update", message);
             resolve();
-          })
+          }),
         );
       }
     });
@@ -485,22 +495,37 @@ export class WorkflowWebSocketGateway
   }
 
   private isValidSubscriptionType(type: string): boolean {
-    return ['workflow', 'execution', 'logs', 'metrics', 'tenant_activity'].includes(type);
+    return [
+      "workflow",
+      "execution",
+      "logs",
+      "metrics",
+      "tenant_activity",
+    ].includes(type);
   }
 
-  private generateSubscriptionKey(request: SubscriptionRequest, tenantId: string): string {
+  private generateSubscriptionKey(
+    request: SubscriptionRequest,
+    tenantId: string,
+  ): string {
     const { type, resourceId } = request;
 
     switch (type) {
-      case 'workflow':
-        return resourceId ? `workflow:${tenantId}:${resourceId}` : `workflow:${tenantId}`;
-      case 'execution':
-        return resourceId ? `execution:${tenantId}:${resourceId}` : `execution:${tenantId}`;
-      case 'logs':
-        return resourceId ? `logs:${tenantId}:${resourceId}` : `logs:${tenantId}`;
-      case 'metrics':
+      case "workflow":
+        return resourceId
+          ? `workflow:${tenantId}:${resourceId}`
+          : `workflow:${tenantId}`;
+      case "execution":
+        return resourceId
+          ? `execution:${tenantId}:${resourceId}`
+          : `execution:${tenantId}`;
+      case "logs":
+        return resourceId
+          ? `logs:${tenantId}:${resourceId}`
+          : `logs:${tenantId}`;
+      case "metrics":
         return `metrics:${tenantId}`;
-      case 'tenant_activity':
+      case "tenant_activity":
         return `tenant_activity:${tenantId}`;
       default:
         throw new Error(`Invalid subscription type: ${type}`);
@@ -517,7 +542,7 @@ export class WorkflowWebSocketGateway
       const mockUser: AuthUser = {
         id: userId,
         tenantId: tenantId,
-        email: '',
+        email: "",
         roles: [],
         permissions: [],
       };
@@ -526,25 +551,31 @@ export class WorkflowWebSocketGateway
       // For now, we'll check basic tenant membership and resource access
 
       switch (request.type) {
-        case 'workflow':
+        case "workflow":
           if (request.resourceId) {
             // Check if user has access to specific workflow
-            const workflow = await this.workflowsService.findOne(request.resourceId, mockUser);
+            const workflow = await this.workflowsService.findOne(
+              request.resourceId,
+              mockUser,
+            );
             return workflow !== null;
           }
           return true; // Allow tenant-wide workflow subscriptions
 
-        case 'execution':
+        case "execution":
           if (request.resourceId) {
             // Check if user has access to specific execution
-            const execution = await this.executionsService.getExecution(request.resourceId, tenantId);
+            const execution = await this.executionsService.getExecution(
+              request.resourceId,
+              tenantId,
+            );
             return execution !== null;
           }
           return true; // Allow tenant-wide execution subscriptions
 
-        case 'logs':
-        case 'metrics':
-        case 'tenant_activity':
+        case "logs":
+        case "metrics":
+        case "tenant_activity":
           return true; // Allow for authenticated users within tenant
 
         default:
@@ -565,21 +596,21 @@ export class WorkflowWebSocketGateway
       const mockUser: AuthUser = {
         id: client.userId,
         tenantId: client.tenantId,
-        email: '',
+        email: "",
         roles: [],
         permissions: [],
       };
 
       switch (request.type) {
-        case 'workflow':
+        case "workflow":
           if (request.resourceId) {
             const workflow = await this.workflowsService.findOne(
               request.resourceId,
               mockUser,
             );
             if (workflow) {
-              client.emit('initial_data', {
-                type: 'workflow',
+              client.emit("initial_data", {
+                type: "workflow",
                 data: workflow,
                 timestamp: new Date().toISOString(),
               });
@@ -587,15 +618,15 @@ export class WorkflowWebSocketGateway
           }
           break;
 
-        case 'execution':
+        case "execution":
           if (request.resourceId) {
             const execution = await this.executionsService.getExecution(
               request.resourceId,
               client.tenantId,
             );
             if (execution) {
-              client.emit('initial_data', {
-                type: 'execution',
+              client.emit("initial_data", {
+                type: "execution",
                 data: execution,
                 timestamp: new Date().toISOString(),
               });
@@ -621,11 +652,13 @@ export class WorkflowWebSocketGateway
     };
   }
 
-  private async validateToken(token: string): Promise<{ userId: string; tenantId: string } | null> {
+  private async validateToken(
+    token: string,
+  ): Promise<{ userId: string; tenantId: string } | null> {
     try {
       // Use the injected JWT service for token validation
       const decoded: any = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET || 'default-secret',
+        secret: process.env.JWT_SECRET || "default-secret",
       });
 
       if (!decoded || !decoded.sub || !decoded.tenantId) {

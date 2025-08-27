@@ -1,18 +1,30 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Schedule, ScheduleStatus, TriggerType } from './entities/schedule.entity';
-import { ScheduledExecution, ExecutionStatus } from './entities/scheduled-execution.entity';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
-import { UpdateScheduleDto } from './dto/update-schedule.dto';
-import { ScheduleResponseDto } from './dto/schedule-response.dto';
-import { CronParserService } from './services/cron-parser.service';
-import { ScheduleValidationService } from './services/schedule-validation.service';
-import { TriggerService } from './services/trigger.service';
-import { MetricsService } from '../../observability/metrics.service';
-import { AuditLogService } from '../audit/audit-log.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, LessThan, MoreThan } from "typeorm";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import {
+  Schedule,
+  ScheduleStatus,
+  TriggerType,
+} from "./entities/schedule.entity";
+import {
+  ScheduledExecution,
+  ExecutionStatus,
+} from "./entities/scheduled-execution.entity";
+import { CreateScheduleDto } from "./dto/create-schedule.dto";
+import { UpdateScheduleDto } from "./dto/update-schedule.dto";
+import { ScheduleResponseDto } from "./dto/schedule-response.dto";
+import { CronParserService } from "./services/cron-parser.service";
+import { ScheduleValidationService } from "./services/schedule-validation.service";
+import { TriggerService } from "./services/trigger.service";
+import { MetricsService } from "../../observability/metrics.service";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class SchedulingService {
@@ -43,10 +55,17 @@ export class SchedulingService {
     await this.scheduleValidationService.validateSchedule(createScheduleDto);
 
     // Validate cron expression if provided
-    if (createScheduleDto.triggerType === TriggerType.CRON && createScheduleDto.cronExpression) {
-      const validation = this.cronParserService.validateCronExpression(createScheduleDto.cronExpression);
+    if (
+      createScheduleDto.triggerType === TriggerType.CRON &&
+      createScheduleDto.cronExpression
+    ) {
+      const validation = this.cronParserService.validateCronExpression(
+        createScheduleDto.cronExpression,
+      );
       if (!validation.isValid) {
-        throw new BadRequestException(`Invalid cron expression: ${validation.error}`);
+        throw new BadRequestException(
+          `Invalid cron expression: ${validation.error}`,
+        );
       }
     }
 
@@ -65,12 +84,15 @@ export class SchedulingService {
     const savedSchedule = await this.scheduleRepository.save(schedule);
 
     // Schedule the first execution
-    if (savedSchedule.isActive && savedSchedule.status === ScheduleStatus.ACTIVE) {
+    if (
+      savedSchedule.isActive &&
+      savedSchedule.status === ScheduleStatus.ACTIVE
+    ) {
       await this.scheduleNextExecution(savedSchedule);
     }
 
     // Emit event
-    this.eventEmitter.emit('schedule.created', {
+    this.eventEmitter.emit("schedule.created", {
       scheduleId: savedSchedule.id,
       workflowId: savedSchedule.workflowId,
       tenantId,
@@ -79,17 +101,17 @@ export class SchedulingService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'schedule.created',
-      resourceType: 'schedule',
+      action: "schedule.created",
+      resourceType: "schedule",
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('schedules_created_total', {
+    this.metricsService.incrementCounter("schedules_created_total", {
       tenant_id: tenantId,
       trigger_type: savedSchedule.triggerType,
     });
@@ -105,30 +127,35 @@ export class SchedulingService {
     workflowId?: string,
   ): Promise<ScheduleResponseDto[]> {
     const queryBuilder = this.scheduleRepository
-      .createQueryBuilder('schedule')
-      .where('schedule.tenantId = :tenantId', { tenantId });
+      .createQueryBuilder("schedule")
+      .where("schedule.tenantId = :tenantId", { tenantId });
 
     if (workflowId) {
-      queryBuilder.andWhere('schedule.workflowId = :workflowId', { workflowId });
+      queryBuilder.andWhere("schedule.workflowId = :workflowId", {
+        workflowId,
+      });
     }
 
     const schedules = await queryBuilder
-      .orderBy('schedule.createdAt', 'DESC')
+      .orderBy("schedule.createdAt", "DESC")
       .getMany();
 
-    return schedules.map(schedule => this.toResponseDto(schedule));
+    return schedules.map((schedule) => this.toResponseDto(schedule));
   }
 
   /**
    * Get a schedule by ID
    */
-  async findScheduleById(id: string, tenantId: string): Promise<ScheduleResponseDto> {
+  async findScheduleById(
+    id: string,
+    tenantId: string,
+  ): Promise<ScheduleResponseDto> {
     const schedule = await this.scheduleRepository.findOne({
       where: { id, tenantId },
     });
 
     if (!schedule) {
-      throw new NotFoundException('Schedule not found');
+      throw new NotFoundException("Schedule not found");
     }
 
     return this.toResponseDto(schedule);
@@ -148,18 +175,22 @@ export class SchedulingService {
     });
 
     if (!schedule) {
-      throw new NotFoundException('Schedule not found');
+      throw new NotFoundException("Schedule not found");
     }
 
     // Validate updated configuration
     if (updateScheduleDto.cronExpression || updateScheduleDto.triggerType) {
-      const cronExpression = updateScheduleDto.cronExpression || schedule.cronExpression;
+      const cronExpression =
+        updateScheduleDto.cronExpression || schedule.cronExpression;
       const triggerType = updateScheduleDto.triggerType || schedule.triggerType;
 
       if (triggerType === TriggerType.CRON && cronExpression) {
-        const validation = this.cronParserService.validateCronExpression(cronExpression);
+        const validation =
+          this.cronParserService.validateCronExpression(cronExpression);
         if (!validation.isValid) {
-          throw new BadRequestException(`Invalid cron expression: ${validation.error}`);
+          throw new BadRequestException(
+            `Invalid cron expression: ${validation.error}`,
+          );
         }
       }
     }
@@ -169,19 +200,26 @@ export class SchedulingService {
     schedule.updatedBy = userId;
 
     // Recalculate next run time if schedule configuration changed
-    if (updateScheduleDto.cronExpression || updateScheduleDto.intervalSeconds || updateScheduleDto.triggerType) {
+    if (
+      updateScheduleDto.cronExpression ||
+      updateScheduleDto.intervalSeconds ||
+      updateScheduleDto.triggerType
+    ) {
       schedule.nextRunAt = this.calculateNextRunTime(schedule);
     }
 
     const savedSchedule = await this.scheduleRepository.save(schedule);
 
     // Reschedule if active
-    if (savedSchedule.isActive && savedSchedule.status === ScheduleStatus.ACTIVE) {
+    if (
+      savedSchedule.isActive &&
+      savedSchedule.status === ScheduleStatus.ACTIVE
+    ) {
       await this.rescheduleExecution(savedSchedule);
     }
 
     // Emit event
-    this.eventEmitter.emit('schedule.updated', {
+    this.eventEmitter.emit("schedule.updated", {
       scheduleId: savedSchedule.id,
       workflowId: savedSchedule.workflowId,
       tenantId,
@@ -190,13 +228,13 @@ export class SchedulingService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'schedule.updated',
-      resourceType: 'schedule',
+      action: "schedule.updated",
+      resourceType: "schedule",
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     return this.toResponseDto(savedSchedule);
@@ -205,13 +243,17 @@ export class SchedulingService {
   /**
    * Delete a schedule
    */
-  async deleteSchedule(id: string, tenantId: string, userId: string): Promise<void> {
+  async deleteSchedule(
+    id: string,
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
     const schedule = await this.scheduleRepository.findOne({
       where: { id, tenantId },
     });
 
     if (!schedule) {
-      throw new NotFoundException('Schedule not found');
+      throw new NotFoundException("Schedule not found");
     }
 
     // Cancel pending executions
@@ -229,7 +271,7 @@ export class SchedulingService {
     await this.scheduleRepository.remove(schedule);
 
     // Emit event
-    this.eventEmitter.emit('schedule.deleted', {
+    this.eventEmitter.emit("schedule.deleted", {
       scheduleId: id,
       workflowId: schedule.workflowId,
       tenantId,
@@ -238,17 +280,17 @@ export class SchedulingService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'schedule.deleted',
-      resourceType: 'schedule',
+      action: "schedule.deleted",
+      resourceType: "schedule",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     // Update metrics
-    this.metricsService.incrementCounter('schedules_deleted_total', {
+    this.metricsService.incrementCounter("schedules_deleted_total", {
       tenant_id: tenantId,
       trigger_type: schedule.triggerType,
     });
@@ -268,11 +310,13 @@ export class SchedulingService {
     });
 
     if (!schedule) {
-      throw new NotFoundException('Schedule not found');
+      throw new NotFoundException("Schedule not found");
     }
 
     schedule.isActive = isActive;
-    schedule.status = isActive ? ScheduleStatus.ACTIVE : ScheduleStatus.INACTIVE;
+    schedule.status = isActive
+      ? ScheduleStatus.ACTIVE
+      : ScheduleStatus.INACTIVE;
     schedule.updatedBy = userId;
 
     if (isActive) {
@@ -295,7 +339,7 @@ export class SchedulingService {
     const savedSchedule = await this.scheduleRepository.save(schedule);
 
     // Emit event
-    this.eventEmitter.emit('schedule.toggled', {
+    this.eventEmitter.emit("schedule.toggled", {
       scheduleId: savedSchedule.id,
       isActive,
       tenantId,
@@ -304,13 +348,13 @@ export class SchedulingService {
 
     // Log audit event
     await this.auditService.log({
-      action: isActive ? 'schedule.activated' : 'schedule.deactivated',
-      resourceType: 'schedule',
+      action: isActive ? "schedule.activated" : "schedule.deactivated",
+      resourceType: "schedule",
       resourceId: savedSchedule.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     return this.toResponseDto(savedSchedule);
@@ -327,7 +371,7 @@ export class SchedulingService {
   ): Promise<ScheduledExecution[]> {
     return this.scheduledExecutionRepository.find({
       where: { scheduleId, tenantId },
-      order: { scheduledAt: 'DESC' },
+      order: { scheduledAt: "DESC" },
       take: limit,
       skip: offset,
     });
@@ -346,7 +390,7 @@ export class SchedulingService {
     });
 
     if (!schedule) {
-      throw new NotFoundException('Schedule not found');
+      throw new NotFoundException("Schedule not found");
     }
 
     // Create manual execution
@@ -356,10 +400,11 @@ export class SchedulingService {
       tenantId,
       status: ExecutionStatus.SCHEDULED,
       scheduledAt: new Date(),
-      triggerData: { type: 'manual', triggeredBy: userId },
+      triggerData: { type: "manual", triggeredBy: userId },
     });
 
-    const savedExecution = await this.scheduledExecutionRepository.save(execution);
+    const savedExecution =
+      await this.scheduledExecutionRepository.save(execution);
 
     // Trigger execution immediately
     await this.triggerService.executeWorkflow(savedExecution);
@@ -369,7 +414,7 @@ export class SchedulingService {
     await this.scheduleRepository.save(schedule);
 
     // Emit event
-    this.eventEmitter.emit('schedule.manually_triggered', {
+    this.eventEmitter.emit("schedule.manually_triggered", {
       scheduleId: id,
       executionId: savedExecution.id,
       tenantId,
@@ -384,7 +429,7 @@ export class SchedulingService {
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async checkDueSchedules(): Promise<void> {
-    this.logger.debug('Checking for due schedules...');
+    this.logger.debug("Checking for due schedules...");
 
     const now = new Date();
     const dueSchedules = await this.scheduleRepository.find({
@@ -402,7 +447,7 @@ export class SchedulingService {
         await this.processSchedule(schedule);
       } catch (error) {
         this.logger.error(`Failed to process schedule ${schedule.id}:`, error);
-        
+
         // Update schedule status to error
         schedule.status = ScheduleStatus.ERROR;
         schedule.lastError = error.message;
@@ -432,7 +477,8 @@ export class SchedulingService {
       executionContext: schedule.executionContext || {},
     });
 
-    const savedExecution = await this.scheduledExecutionRepository.save(execution);
+    const savedExecution =
+      await this.scheduledExecutionRepository.save(execution);
 
     // Trigger execution
     await this.triggerService.executeWorkflow(savedExecution);
@@ -449,13 +495,17 @@ export class SchedulingService {
       await this.scheduleNextExecution(schedule);
     }
 
-    this.logger.debug(`Processed schedule ${schedule.id}, next run: ${schedule.nextRunAt}`);
+    this.logger.debug(
+      `Processed schedule ${schedule.id}, next run: ${schedule.nextRunAt}`,
+    );
   }
 
   /**
    * Calculate next run time for a schedule
    */
-  private calculateNextRunTime(schedule: Schedule | CreateScheduleDto): Date | null {
+  private calculateNextRunTime(
+    schedule: Schedule | CreateScheduleDto,
+  ): Date | null {
     const now = new Date();
 
     // Check end date
@@ -464,8 +514,11 @@ export class SchedulingService {
     }
 
     // Check max executions
-    if (schedule.maxExecutions && 'totalExecutions' in schedule && 
-        schedule.totalExecutions >= schedule.maxExecutions) {
+    if (
+      schedule.maxExecutions &&
+      "totalExecutions" in schedule &&
+      schedule.totalExecutions >= schedule.maxExecutions
+    ) {
       return null;
     }
 
@@ -482,13 +535,15 @@ export class SchedulingService {
 
         case TriggerType.INTERVAL:
           if (schedule.intervalSeconds) {
-            const nextRun = new Date(now.getTime() + schedule.intervalSeconds * 1000);
-            
+            const nextRun = new Date(
+              now.getTime() + schedule.intervalSeconds * 1000,
+            );
+
             // Respect start date
             if (schedule.startDate && nextRun < schedule.startDate) {
               return schedule.startDate;
             }
-            
+
             return nextRun;
           }
           break;
@@ -497,7 +552,10 @@ export class SchedulingService {
           return null;
       }
     } catch (error) {
-      this.logger.error(`Failed to calculate next run time for schedule:`, error);
+      this.logger.error(
+        `Failed to calculate next run time for schedule:`,
+        error,
+      );
       return null;
     }
 
@@ -526,7 +584,10 @@ export class SchedulingService {
     }
 
     // Check max executions
-    if (schedule.maxExecutions && schedule.totalExecutions >= schedule.maxExecutions) {
+    if (
+      schedule.maxExecutions &&
+      schedule.totalExecutions >= schedule.maxExecutions
+    ) {
       return false;
     }
 
@@ -546,7 +607,9 @@ export class SchedulingService {
   private async scheduleNextExecution(schedule: Schedule): Promise<void> {
     // This method would integrate with a job queue system like BullMQ
     // to schedule the actual execution at the specified time
-    this.logger.debug(`Scheduling next execution for ${schedule.id} at ${schedule.nextRunAt}`);
+    this.logger.debug(
+      `Scheduling next execution for ${schedule.id} at ${schedule.nextRunAt}`,
+    );
   }
 
   /**

@@ -1,19 +1,27 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, In } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NodeType, NodeCategory, NodeTypeEnum } from './entities/node-type.entity';
-import { NodeVersion } from './entities/node-version.entity';
-import { PluginPackage, PackageStatus } from './entities/plugin-package.entity';
-import { CreateNodeDto } from './dto/create-node.dto';
-import { UpdateNodeDto } from './dto/update-node.dto';
-import { NodeResponseDto } from './dto/node-response.dto';
-import { CreatePluginPackageDto } from './dto/create-plugin-package.dto';
-import { NodeRegistryService } from './services/node-registry.service';
-import { PluginLoaderService } from './services/plugin-loader.service';
-import { NodeValidationService } from './services/node-validation.service';
-import { MetricsService } from '../../observability/metrics.service';
-import { AuditLogService } from '../audit/audit-log.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Like, In } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import {
+  NodeType,
+  NodeCategory,
+  NodeTypeEnum,
+} from "./entities/node-type.entity";
+import { NodeVersion } from "./entities/node-version.entity";
+import { PluginPackage, PackageStatus } from "./entities/plugin-package.entity";
+import { CreateNodeDto } from "./dto/create-node.dto";
+import { UpdateNodeDto } from "./dto/update-node.dto";
+import { NodeResponseDto } from "./dto/node-response.dto";
+import { CreatePluginPackageDto } from "./dto/create-plugin-package.dto";
+import { NodeRegistryService } from "./services/node-registry.service";
+import { PluginLoaderService } from "./services/plugin-loader.service";
+import { NodeValidationService } from "./services/node-validation.service";
+import { MetricsService } from "../../observability/metrics.service";
+import { AuditLogService } from "../audit/audit-log.service";
 
 export interface NodeSearchFilters {
   category?: NodeCategory;
@@ -49,39 +57,45 @@ export class NodesService {
     tenantId?: string,
   ): Promise<NodeResponseDto[]> {
     const queryBuilder = this.nodeRepository
-      .createQueryBuilder('node')
-      .leftJoinAndSelect('node.currentVersion', 'version')
-      .leftJoinAndSelect('node.pluginPackage', 'package')
-      .where('node.isActive = :isActive', { isActive: true });
+      .createQueryBuilder("node")
+      .leftJoinAndSelect("node.currentVersion", "version")
+      .leftJoinAndSelect("node.pluginPackage", "package")
+      .where("node.isActive = :isActive", { isActive: true });
 
     // Apply filters
     if (filters.category) {
-      queryBuilder.andWhere('node.category = :category', { category: filters.category });
+      queryBuilder.andWhere("node.category = :category", {
+        category: filters.category,
+      });
     }
 
     if (filters.nodeType) {
-      queryBuilder.andWhere('node.nodeType = :nodeType', { nodeType: filters.nodeType });
+      queryBuilder.andWhere("node.nodeType = :nodeType", {
+        nodeType: filters.nodeType,
+      });
     }
 
     if (filters.isBuiltIn !== undefined) {
-      queryBuilder.andWhere('node.isBuiltIn = :isBuiltIn', { isBuiltIn: filters.isBuiltIn });
+      queryBuilder.andWhere("node.isBuiltIn = :isBuiltIn", {
+        isBuiltIn: filters.isBuiltIn,
+      });
     }
 
     if (filters.requiresCredentials !== undefined) {
-      queryBuilder.andWhere('node.requiresCredentials = :requiresCredentials', {
+      queryBuilder.andWhere("node.requiresCredentials = :requiresCredentials", {
         requiresCredentials: filters.requiresCredentials,
       });
     }
 
     if (filters.pluginPackageId) {
-      queryBuilder.andWhere('node.pluginPackageId = :pluginPackageId', {
+      queryBuilder.andWhere("node.pluginPackageId = :pluginPackageId", {
         pluginPackageId: filters.pluginPackageId,
       });
     }
 
     if (filters.keywords) {
       queryBuilder.andWhere(
-        '(node.name ILIKE :search OR node.displayName ILIKE :search OR node.description ILIKE :search OR :searchKeyword = ANY(node.keywords))',
+        "(node.name ILIKE :search OR node.displayName ILIKE :search OR node.description ILIKE :search OR :searchKeyword = ANY(node.keywords))",
         {
           search: `%${filters.keywords}%`,
           searchKeyword: filters.keywords,
@@ -90,10 +104,10 @@ export class NodesService {
     }
 
     const nodes = await queryBuilder
-      .orderBy('node.displayName', 'ASC')
+      .orderBy("node.displayName", "ASC")
       .getMany();
 
-    return nodes.map(node => this.toNodeResponseDto(node));
+    return nodes.map((node) => this.toNodeResponseDto(node));
   }
 
   /**
@@ -102,11 +116,11 @@ export class NodesService {
   async findNodeById(id: string): Promise<NodeResponseDto> {
     const node = await this.nodeRepository.findOne({
       where: { id, isActive: true },
-      relations: ['currentVersion', 'pluginPackage'],
+      relations: ["currentVersion", "pluginPackage"],
     });
 
     if (!node) {
-      throw new NotFoundException('Node not found');
+      throw new NotFoundException("Node not found");
     }
 
     return this.toNodeResponseDto(node);
@@ -118,11 +132,11 @@ export class NodesService {
   async findNodeByName(name: string): Promise<NodeResponseDto> {
     const node = await this.nodeRepository.findOne({
       where: { name, isActive: true },
-      relations: ['currentVersion', 'pluginPackage'],
+      relations: ["currentVersion", "pluginPackage"],
     });
 
     if (!node) {
-      throw new NotFoundException('Node not found');
+      throw new NotFoundException("Node not found");
     }
 
     return this.toNodeResponseDto(node);
@@ -137,7 +151,9 @@ export class NodesService {
     tenantId?: string,
   ): Promise<NodeResponseDto> {
     // Validate node definition
-    await this.nodeValidationService.validateNodeDefinition(createNodeDto.definition);
+    await this.nodeValidationService.validateNodeDefinition(
+      createNodeDto.definition,
+    );
 
     // Check if node with same name already exists
     const existingNode = await this.nodeRepository.findOne({
@@ -145,7 +161,7 @@ export class NodesService {
     });
 
     if (existingNode) {
-      throw new BadRequestException('Node with this name already exists');
+      throw new BadRequestException("Node with this name already exists");
     }
 
     // Create node type
@@ -161,8 +177,8 @@ export class NodesService {
     // Create initial version
     const nodeVersion = this.nodeVersionRepository.create({
       nodeTypeId: savedNode.id,
-      version: '1.0.0',
-      code: createNodeDto.code || '',
+      version: "1.0.0",
+      code: createNodeDto.code || "",
       definition: createNodeDto.definition,
       isActive: true,
       isStable: false,
@@ -180,7 +196,7 @@ export class NodesService {
     await this.nodeRegistryService.registerNode(savedNode);
 
     // Emit event
-    this.eventEmitter.emit('node.created', {
+    this.eventEmitter.emit("node.created", {
       nodeId: savedNode.id,
       nodeName: savedNode.name,
       userId,
@@ -190,18 +206,18 @@ export class NodesService {
     // Log audit event
     if (tenantId) {
       await this.auditService.log({
-        action: 'node.created',
-        resourceType: 'node',
+        action: "node.created",
+        resourceType: "node",
         resourceId: savedNode.id,
         tenantId,
         userId,
-        ipAddress: 'unknown',
-        userAgent: 'unknown',
+        ipAddress: "unknown",
+        userAgent: "unknown",
       });
     }
 
     // Update metrics
-    this.metricsService.incrementCounter('nodes_created_total', {
+    this.metricsService.incrementCounter("nodes_created_total", {
       node_type: savedNode.nodeType,
       category: savedNode.category,
     });
@@ -220,21 +236,23 @@ export class NodesService {
   ): Promise<NodeResponseDto> {
     const node = await this.nodeRepository.findOne({
       where: { id, isActive: true },
-      relations: ['currentVersion'],
+      relations: ["currentVersion"],
     });
 
     if (!node) {
-      throw new NotFoundException('Node not found');
+      throw new NotFoundException("Node not found");
     }
 
     // Built-in nodes cannot be updated
     if (node.isBuiltIn) {
-      throw new BadRequestException('Built-in nodes cannot be updated');
+      throw new BadRequestException("Built-in nodes cannot be updated");
     }
 
     // Validate new definition if provided
     if (updateNodeDto.definition) {
-      await this.nodeValidationService.validateNodeDefinition(updateNodeDto.definition);
+      await this.nodeValidationService.validateNodeDefinition(
+        updateNodeDto.definition,
+      );
     }
 
     // Update node
@@ -249,7 +267,7 @@ export class NodesService {
     }
 
     // Emit event
-    this.eventEmitter.emit('node.updated', {
+    this.eventEmitter.emit("node.updated", {
       nodeId: savedNode.id,
       nodeName: savedNode.name,
       userId,
@@ -259,13 +277,13 @@ export class NodesService {
     // Log audit event
     if (tenantId) {
       await this.auditService.log({
-        action: 'node.updated',
-        resourceType: 'node',
+        action: "node.updated",
+        resourceType: "node",
         resourceId: savedNode.id,
         tenantId,
         userId,
-        ipAddress: 'unknown',
-        userAgent: 'unknown',
+        ipAddress: "unknown",
+        userAgent: "unknown",
       });
     }
 
@@ -275,18 +293,22 @@ export class NodesService {
   /**
    * Delete a node type
    */
-  async deleteNode(id: string, userId: string, tenantId?: string): Promise<void> {
+  async deleteNode(
+    id: string,
+    userId: string,
+    tenantId?: string,
+  ): Promise<void> {
     const node = await this.nodeRepository.findOne({
       where: { id, isActive: true },
     });
 
     if (!node) {
-      throw new NotFoundException('Node not found');
+      throw new NotFoundException("Node not found");
     }
 
     // Built-in nodes cannot be deleted
     if (node.isBuiltIn) {
-      throw new BadRequestException('Built-in nodes cannot be deleted');
+      throw new BadRequestException("Built-in nodes cannot be deleted");
     }
 
     // Soft delete (mark as inactive)
@@ -297,7 +319,7 @@ export class NodesService {
     await this.nodeRegistryService.unregisterNode(node.name);
 
     // Emit event
-    this.eventEmitter.emit('node.deleted', {
+    this.eventEmitter.emit("node.deleted", {
       nodeId: id,
       nodeName: node.name,
       userId,
@@ -307,18 +329,18 @@ export class NodesService {
     // Log audit event
     if (tenantId) {
       await this.auditService.log({
-        action: 'node.deleted',
-        resourceType: 'node',
+        action: "node.deleted",
+        resourceType: "node",
         resourceId: id,
         tenantId,
         userId,
-        ipAddress: 'unknown',
-        userAgent: 'unknown',
+        ipAddress: "unknown",
+        userAgent: "unknown",
       });
     }
 
     // Update metrics
-    this.metricsService.incrementCounter('nodes_deleted_total', {
+    this.metricsService.incrementCounter("nodes_deleted_total", {
       node_type: node.nodeType,
       category: node.category,
     });
@@ -327,17 +349,19 @@ export class NodesService {
   /**
    * Get available node categories
    */
-  async getNodeCategories(): Promise<{ category: NodeCategory; count: number }[]> {
+  async getNodeCategories(): Promise<
+    { category: NodeCategory; count: number }[]
+  > {
     const result = await this.nodeRepository
-      .createQueryBuilder('node')
-      .select('node.category', 'category')
-      .addSelect('COUNT(*)', 'count')
-      .where('node.isActive = :isActive', { isActive: true })
-      .groupBy('node.category')
-      .orderBy('count', 'DESC')
+      .createQueryBuilder("node")
+      .select("node.category", "category")
+      .addSelect("COUNT(*)", "count")
+      .where("node.isActive = :isActive", { isActive: true })
+      .groupBy("node.category")
+      .orderBy("count", "DESC")
       .getRawMany();
 
-    return result.map(item => ({
+    return result.map((item) => ({
       category: item.category,
       count: parseInt(item.count, 10),
     }));
@@ -352,7 +376,12 @@ export class NodesService {
     tenantId?: string,
     userId?: string,
   ): Promise<PluginPackage> {
-    return this.pluginLoaderService.installPlugin(packageName, version, tenantId, userId);
+    return this.pluginLoaderService.installPlugin(
+      packageName,
+      version,
+      tenantId,
+      userId,
+    );
   }
 
   /**
@@ -363,7 +392,11 @@ export class NodesService {
     tenantId?: string,
     userId?: string,
   ): Promise<void> {
-    return this.pluginLoaderService.uninstallPlugin(packageId, tenantId, userId);
+    return this.pluginLoaderService.uninstallPlugin(
+      packageId,
+      tenantId,
+      userId,
+    );
   }
 
   /**
@@ -372,8 +405,8 @@ export class NodesService {
   async getInstalledPlugins(tenantId?: string): Promise<PluginPackage[]> {
     return this.pluginPackageRepository.find({
       where: { status: PackageStatus.PUBLISHED },
-      relations: ['nodeTypes'],
-      order: { displayName: 'ASC' },
+      relations: ["nodeTypes"],
+      order: { displayName: "ASC" },
     });
   }
 

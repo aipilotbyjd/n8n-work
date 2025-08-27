@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { WorkflowWebSocketGateway } from './workflow-websocket.gateway';
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { WorkflowWebSocketGateway } from "./workflow-websocket.gateway";
 
 interface BroadcastOptions {
   tenantId?: string;
@@ -46,7 +46,7 @@ export class WebSocketService implements OnModuleDestroy {
    */
   async broadcast(message: any, options: BroadcastOptions = {}): Promise<void> {
     if (!this.gateway) {
-      this.logger.warn('WebSocket gateway not initialized');
+      this.logger.warn("WebSocket gateway not initialized");
       return;
     }
 
@@ -60,7 +60,9 @@ export class WebSocketService implements OnModuleDestroy {
       } else if (tenantId) {
         await this.gateway.broadcastToTenant(tenantId, message);
       } else {
-        this.logger.warn('Broadcast called without sufficient targeting criteria');
+        this.logger.warn(
+          "Broadcast called without sufficient targeting criteria",
+        );
       }
     } catch (error) {
       this.logger.error(`Broadcast error: ${error.message}`, error.stack);
@@ -77,7 +79,7 @@ export class WebSocketService implements OnModuleDestroy {
     payload: any,
   ): Promise<void> {
     const message = {
-      type: 'workflow_event',
+      type: "workflow_event",
       eventType,
       workflowId,
       payload,
@@ -85,7 +87,7 @@ export class WebSocketService implements OnModuleDestroy {
     };
 
     await this.broadcast(message, { tenantId, workflowId });
-    
+
     // Also emit to event bus for other services
     this.eventEmitter.emit(`workflow.${eventType}`, {
       tenantId,
@@ -105,7 +107,7 @@ export class WebSocketService implements OnModuleDestroy {
     payload: any,
   ): Promise<void> {
     const message = {
-      type: 'execution_event',
+      type: "execution_event",
       eventType,
       executionId,
       workflowId,
@@ -114,10 +116,10 @@ export class WebSocketService implements OnModuleDestroy {
     };
 
     await this.broadcast(message, { tenantId, executionId });
-    
+
     // Also broadcast to workflow subscribers
     await this.broadcast(message, { tenantId, workflowId });
-    
+
     // Emit to event bus
     this.eventEmitter.emit(`execution.${eventType}`, {
       tenantId,
@@ -138,7 +140,7 @@ export class WebSocketService implements OnModuleDestroy {
     payload: any,
   ): Promise<void> {
     const message = {
-      type: 'step_event',
+      type: "step_event",
       eventType,
       executionId,
       stepId,
@@ -147,7 +149,7 @@ export class WebSocketService implements OnModuleDestroy {
     };
 
     await this.broadcast(message, { tenantId, executionId });
-    
+
     // Emit to event bus
     this.eventEmitter.emit(`step.${eventType}`, {
       tenantId,
@@ -166,14 +168,14 @@ export class WebSocketService implements OnModuleDestroy {
     payload: any,
   ): Promise<void> {
     const message = {
-      type: 'system_event',
+      type: "system_event",
       eventType,
       payload,
       timestamp: new Date().toISOString(),
     };
 
     await this.broadcast(message, { tenantId });
-    
+
     // Emit to event bus
     this.eventEmitter.emit(`system.${eventType}`, {
       tenantId,
@@ -190,7 +192,7 @@ export class WebSocketService implements OnModuleDestroy {
     logs: any[],
   ): Promise<void> {
     const message = {
-      type: 'logs',
+      type: "logs",
       executionId,
       logs,
       timestamp: new Date().toISOString(),
@@ -202,12 +204,9 @@ export class WebSocketService implements OnModuleDestroy {
   /**
    * Send real-time metrics
    */
-  async sendMetrics(
-    tenantId: string,
-    metrics: any,
-  ): Promise<void> {
+  async sendMetrics(tenantId: string, metrics: any): Promise<void> {
     const message = {
-      type: 'metrics',
+      type: "metrics",
       metrics,
       timestamp: new Date().toISOString(),
     };
@@ -245,115 +244,115 @@ export class WebSocketService implements OnModuleDestroy {
    */
   private setupEventListeners(): void {
     // Workflow events
-    this.eventEmitter.on('workflow.created', (payload) => {
+    this.eventEmitter.on("workflow.created", (payload) => {
       this.notifyWorkflowEvent(
         payload.tenantId,
         payload.workflowId,
-        'created',
+        "created",
         payload,
       );
     });
 
-    this.eventEmitter.on('workflow.updated', (payload) => {
+    this.eventEmitter.on("workflow.updated", (payload) => {
       this.notifyWorkflowEvent(
         payload.tenantId,
         payload.workflowId,
-        'updated',
+        "updated",
         payload,
       );
     });
 
-    this.eventEmitter.on('workflow.deleted', (payload) => {
+    this.eventEmitter.on("workflow.deleted", (payload) => {
       this.notifyWorkflowEvent(
         payload.tenantId,
         payload.workflowId,
-        'deleted',
+        "deleted",
         payload,
       );
     });
 
     // Execution events
-    this.eventEmitter.on('execution.started', (payload) => {
+    this.eventEmitter.on("execution.started", (payload) => {
       this.notifyExecutionEvent(
         payload.tenantId,
         payload.executionId,
         payload.workflowId,
-        'started',
+        "started",
         payload,
       );
     });
 
-    this.eventEmitter.on('execution.completed', (payload) => {
+    this.eventEmitter.on("execution.completed", (payload) => {
       this.notifyExecutionEvent(
         payload.tenantId,
         payload.executionId,
         payload.workflowId,
-        'completed',
+        "completed",
         payload,
       );
     });
 
-    this.eventEmitter.on('execution.failed', (payload) => {
+    this.eventEmitter.on("execution.failed", (payload) => {
       this.notifyExecutionEvent(
         payload.tenantId,
         payload.executionId,
         payload.workflowId,
-        'failed',
+        "failed",
         payload,
       );
     });
 
     // Step events
-    this.eventEmitter.on('step.started', (payload) => {
+    this.eventEmitter.on("step.started", (payload) => {
       this.notifyStepEvent(
         payload.tenantId,
         payload.executionId,
         payload.stepId,
-        'started',
+        "started",
         payload,
       );
     });
 
-    this.eventEmitter.on('step.completed', (payload) => {
+    this.eventEmitter.on("step.completed", (payload) => {
       this.notifyStepEvent(
         payload.tenantId,
         payload.executionId,
         payload.stepId,
-        'completed',
+        "completed",
         payload,
       );
     });
 
-    this.eventEmitter.on('step.failed', (payload) => {
+    this.eventEmitter.on("step.failed", (payload) => {
       this.notifyStepEvent(
         payload.tenantId,
         payload.executionId,
         payload.stepId,
-        'failed',
+        "failed",
         payload,
       );
     });
 
     // System events
-    this.eventEmitter.on('system.quota_exceeded', (payload) => {
-      this.notifySystemEvent(payload.tenantId, 'quota_exceeded', payload);
+    this.eventEmitter.on("system.quota_exceeded", (payload) => {
+      this.notifySystemEvent(payload.tenantId, "quota_exceeded", payload);
     });
 
-    this.eventEmitter.on('system.maintenance', (payload) => {
-      this.notifySystemEvent(payload.tenantId, 'maintenance', payload);
+    this.eventEmitter.on("system.maintenance", (payload) => {
+      this.notifySystemEvent(payload.tenantId, "maintenance", payload);
     });
 
     // Log events
-    this.eventEmitter.on('log.created', (payload) => {
+    this.eventEmitter.on("log.created", (payload) => {
       this.sendLogs(payload.tenantId, payload.executionId, [payload]);
     });
 
     // Metrics events
-    this.eventEmitter.on('metrics.updated', (payload) => {
+    this.eventEmitter.on("metrics.updated", (payload) => {
       this.sendMetrics(payload.tenantId, payload.metrics);
     });
 
-    this.logger.log('Event listeners set up for WebSocket service');
+    this.logger.log("Event listeners set up for WebSocket service");
   }
 
   /**
@@ -361,9 +360,9 @@ export class WebSocketService implements OnModuleDestroy {
    */
   getHealthStatus(): any {
     const stats = this.getConnectionStats();
-    
+
     return {
-      status: this.gateway ? 'healthy' : 'unhealthy',
+      status: this.gateway ? "healthy" : "unhealthy",
       gateway_initialized: !!this.gateway,
       connections: stats.totalConnections,
       subscriptions: stats.activeSubscriptions,
@@ -374,7 +373,7 @@ export class WebSocketService implements OnModuleDestroy {
   /**
    * Force disconnect all clients (for maintenance)
    */
-  async disconnectAll(reason = 'Server maintenance'): Promise<void> {
+  async disconnectAll(reason = "Server maintenance"): Promise<void> {
     if (this.gateway) {
       await this.gateway.shutdown();
       this.logger.log(`Disconnected all WebSocket clients: ${reason}`);

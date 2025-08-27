@@ -1,9 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Tenant } from '../../tenants/entities/tenant.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
-@Entity('users')
+@Entity("users")
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -21,14 +29,14 @@ export class User {
   @Column({ default: true })
   active: boolean;
 
-  @Column('simple-array', { default: [] })
+  @Column("simple-array", { default: [] })
   roles: string[];
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.users)
-  @JoinColumn({ name: 'tenantId' })
+  @JoinColumn({ name: "tenantId" })
   tenant: Tenant;
 
   @CreateDateColumn()

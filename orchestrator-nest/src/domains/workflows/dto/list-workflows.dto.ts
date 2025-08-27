@@ -1,11 +1,17 @@
-import { IsOptional, IsString, IsNumber, IsArray, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  IsEnum,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 export enum WorkflowStatus {
-  DRAFT = 'draft',
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  DEPRECATED = 'deprecated'
+  DRAFT = "draft",
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  DEPRECATED = "deprecated",
 }
 
 export class ListWorkflowsDto {
@@ -38,17 +44,17 @@ export class ListWorkflowsDto {
 
   @IsOptional()
   @IsString()
-  sortBy?: string = 'updatedAt';
+  sortBy?: string = "updatedAt";
 
   @IsOptional()
   @IsString()
-  sortOrder?: 'ASC' | 'DESC' = 'DESC';
+  sortOrder?: "ASC" | "DESC" = "DESC";
 
   @IsOptional()
   @IsString()
-  orderBy?: string = 'updatedAt';
+  orderBy?: string = "updatedAt";
 
   @IsOptional()
   @IsString()
-  orderDirection?: 'ASC' | 'DESC' = 'DESC';
+  orderDirection?: "ASC" | "DESC" = "DESC";
 }

@@ -4,9 +4,9 @@ import {
   ExecutionContext,
   ForbiddenException,
   BadRequestException,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { Request } from "express";
 
 // Extend Request interface to include tenantId
 declare global {
@@ -26,7 +26,7 @@ export class TenantGuard implements CanActivate {
     const user = request.user as any;
 
     if (!user) {
-      throw new ForbiddenException('User must be authenticated');
+      throw new ForbiddenException("User must be authenticated");
     }
 
     // Extract tenant ID from various sources
@@ -42,7 +42,7 @@ export class TenantGuard implements CanActivate {
 
     // 3. Check custom header
     if (!tenantId) {
-      tenantId = request.headers['x-tenant-id'] as string;
+      tenantId = request.headers["x-tenant-id"] as string;
     }
 
     // 4. Use user's default tenant
@@ -56,12 +56,12 @@ export class TenantGuard implements CanActivate {
     }
 
     if (!tenantId) {
-      throw new BadRequestException('Tenant ID is required');
+      throw new BadRequestException("Tenant ID is required");
     }
 
     // Validate user has access to this tenant
     if (!this.hasAccessToTenant(user, tenantId)) {
-      throw new ForbiddenException('Access denied to this tenant');
+      throw new ForbiddenException("Access denied to this tenant");
     }
 
     // Attach tenant ID to request for use in controllers
@@ -77,7 +77,7 @@ export class TenantGuard implements CanActivate {
 
     // Check if user belongs to the tenant
     return user.tenants.some((tenant: any) => {
-      return (typeof tenant === 'string' ? tenant : tenant.id) === tenantId;
+      return (typeof tenant === "string" ? tenant : tenant.id) === tenantId;
     });
   }
 }

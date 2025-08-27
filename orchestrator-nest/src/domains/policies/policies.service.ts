@@ -1,14 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Policy } from './entities/policy.entity';
-import { PolicyAssignment, AssigneeType } from './entities/policy-assignment.entity';
-import { CreatePolicyDto } from './dto/index';
-import { UpdatePolicyDto } from './dto/index';
-import { AssignPolicyDto } from './dto/index';
-import { PolicyResponseDto } from './dto/index';
-import { AuditLogService } from '../audit/audit-log.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Policy } from "./entities/policy.entity";
+import {
+  PolicyAssignment,
+  AssigneeType,
+} from "./entities/policy-assignment.entity";
+import { CreatePolicyDto } from "./dto/index";
+import { UpdatePolicyDto } from "./dto/index";
+import { AssignPolicyDto } from "./dto/index";
+import { PolicyResponseDto } from "./dto/index";
+import { AuditLogService } from "../audit/audit-log.service";
 
 export interface PolicyEvaluationContext {
   userId: string;
@@ -49,7 +56,7 @@ export class PoliciesService {
     });
 
     if (existingPolicy) {
-      throw new BadRequestException('Policy with this name already exists');
+      throw new BadRequestException("Policy with this name already exists");
     }
 
     const policy = this.policyRepository.create({
@@ -61,7 +68,7 @@ export class PoliciesService {
     const savedPolicy = await this.policyRepository.save(policy);
 
     // Emit policy created event
-    this.eventEmitter.emit('policy.created', {
+    this.eventEmitter.emit("policy.created", {
       tenantId,
       policyId: savedPolicy.id,
       policyName: savedPolicy.name,
@@ -72,12 +79,12 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.created',
-      resourceType: 'policy',
+      action: "policy.created",
+      resourceType: "policy",
       resourceId: savedPolicy.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: { name: savedPolicy.name, type: savedPolicy.type }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: { name: savedPolicy.name, type: savedPolicy.type },
     });
 
     return this.mapToPolicyResponse(savedPolicy);
@@ -97,7 +104,7 @@ export class PoliciesService {
     });
 
     if (!policy) {
-      throw new NotFoundException('Policy not found');
+      throw new NotFoundException("Policy not found");
     }
 
     Object.assign(policy, updatePolicyDto);
@@ -106,7 +113,7 @@ export class PoliciesService {
     const savedPolicy = await this.policyRepository.save(policy);
 
     // Emit policy updated event
-    this.eventEmitter.emit('policy.updated', {
+    this.eventEmitter.emit("policy.updated", {
       tenantId,
       policyId: savedPolicy.id,
       updatedBy: userId,
@@ -116,12 +123,12 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.updated',
-      resourceType: 'policy',
+      action: "policy.updated",
+      resourceType: "policy",
       resourceId: savedPolicy.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: updatePolicyDto
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: updatePolicyDto,
     });
 
     return this.mapToPolicyResponse(savedPolicy);
@@ -130,13 +137,16 @@ export class PoliciesService {
   /**
    * Get policy by ID
    */
-  async getPolicy(tenantId: string, policyId: string): Promise<PolicyResponseDto> {
+  async getPolicy(
+    tenantId: string,
+    policyId: string,
+  ): Promise<PolicyResponseDto> {
     const policy = await this.policyRepository.findOne({
       where: { id: policyId, tenantId },
     });
 
     if (!policy) {
-      throw new NotFoundException('Policy not found');
+      throw new NotFoundException("Policy not found");
     }
 
     return this.mapToPolicyResponse(policy);
@@ -148,22 +158,26 @@ export class PoliciesService {
   async getPolicies(tenantId: string): Promise<PolicyResponseDto[]> {
     const policies = await this.policyRepository.find({
       where: { tenantId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
 
-    return policies.map(policy => this.mapToPolicyResponse(policy));
+    return policies.map((policy) => this.mapToPolicyResponse(policy));
   }
 
   /**
    * Delete a policy
    */
-  async deletePolicy(tenantId: string, policyId: string, userId: string): Promise<void> {
+  async deletePolicy(
+    tenantId: string,
+    policyId: string,
+    userId: string,
+  ): Promise<void> {
     const policy = await this.policyRepository.findOne({
       where: { id: policyId, tenantId },
     });
 
     if (!policy) {
-      throw new NotFoundException('Policy not found');
+      throw new NotFoundException("Policy not found");
     }
 
     // Remove all policy assignments
@@ -173,7 +187,7 @@ export class PoliciesService {
     await this.policyRepository.delete(policyId);
 
     // Emit policy deleted event
-    this.eventEmitter.emit('policy.deleted', {
+    this.eventEmitter.emit("policy.deleted", {
       tenantId,
       policyId,
       deletedBy: userId,
@@ -183,12 +197,12 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.deleted',
-      resourceType: 'policy',
+      action: "policy.deleted",
+      resourceType: "policy",
       resourceId: policyId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      oldValues: { name: policy.name }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      oldValues: { name: policy.name },
     });
   }
 
@@ -205,7 +219,7 @@ export class PoliciesService {
     });
 
     if (!policy) {
-      throw new NotFoundException('Policy not found');
+      throw new NotFoundException("Policy not found");
     }
 
     // Check if assignment already exists
@@ -218,7 +232,7 @@ export class PoliciesService {
     });
 
     if (existingAssignment) {
-      throw new BadRequestException('Policy already assigned to this entity');
+      throw new BadRequestException("Policy already assigned to this entity");
     }
 
     const assignment = this.policyAssignmentRepository.create({
@@ -230,7 +244,7 @@ export class PoliciesService {
     await this.policyAssignmentRepository.save(assignment);
 
     // Emit policy assigned event
-    this.eventEmitter.emit('policy.assigned', {
+    this.eventEmitter.emit("policy.assigned", {
       tenantId,
       policyId: assignPolicyDto.policyId,
       assigneeType: assignPolicyDto.assigneeType,
@@ -242,16 +256,16 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.assigned',
-      resourceType: 'policy_assignment',
+      action: "policy.assigned",
+      resourceType: "policy_assignment",
       resourceId: assignment.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: {
         policyId: assignPolicyDto.policyId,
         assigneeType: assignPolicyDto.assigneeType,
         assigneeId: assignPolicyDto.assigneeId,
-      }
+      },
     });
   }
 
@@ -275,13 +289,13 @@ export class PoliciesService {
     });
 
     if (!assignment) {
-      throw new NotFoundException('Policy assignment not found');
+      throw new NotFoundException("Policy assignment not found");
     }
 
     await this.policyAssignmentRepository.delete(assignment.id);
 
     // Emit policy unassigned event
-    this.eventEmitter.emit('policy.unassigned', {
+    this.eventEmitter.emit("policy.unassigned", {
       tenantId,
       policyId,
       assigneeType,
@@ -293,48 +307,55 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.unassigned',
-      resourceType: 'policy_assignment',
+      action: "policy.unassigned",
+      resourceType: "policy_assignment",
       resourceId: assignment.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      oldValues: { policyId, assigneeType, assigneeId }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      oldValues: { policyId, assigneeType, assigneeId },
     });
   }
 
   /**
    * Evaluate policies for a given context
    */
-  async evaluatePolicies(context: PolicyEvaluationContext): Promise<PolicyEvaluationResult> {
-    const { userId, tenantId, resource, action, resourceId, metadata } = context;
+  async evaluatePolicies(
+    context: PolicyEvaluationContext,
+  ): Promise<PolicyEvaluationResult> {
+    const { userId, tenantId, resource, action, resourceId, metadata } =
+      context;
 
     // Get all policies assigned to the user (directly or through roles)
     const userAssignments = await this.policyAssignmentRepository.find({
       where: [
-        { assigneeType: 'user', assigneeId: userId, tenantId },
-        { assigneeType: 'role', assigneeId: In(await this.getUserRoles(userId, tenantId)), tenantId },
+        { assigneeType: "user", assigneeId: userId, tenantId },
+        {
+          assigneeType: "role",
+          assigneeId: In(await this.getUserRoles(userId, tenantId)),
+          tenantId,
+        },
       ],
-      relations: ['policy'],
+      relations: ["policy"],
     });
 
     const applicablePolicies = userAssignments
-      .map(assignment => assignment.policy)
-      .filter(policy => policy.status === 'active');
+      .map((assignment) => assignment.policy)
+      .filter((policy) => policy.status === "active");
 
     let allowed = false;
-    let reason = 'No applicable policies found';
+    let reason = "No applicable policies found";
     const appliedPolicies: string[] = [];
 
     for (const policy of applicablePolicies) {
       const policyResult = this.evaluatePolicy(policy, context);
-      
+
       if (policyResult.applies) {
         appliedPolicies.push(policy.name);
-        
-        if (policy.effect === 'allow') {
+
+        if (policy.effect === "allow") {
           allowed = true;
           reason = `Allowed by policy: ${policy.name}`;
-        } else if (policy.effect === 'deny') {
+        } else if (policy.effect === "deny") {
           // Deny policies override allow policies
           allowed = false;
           reason = `Denied by policy: ${policy.name}`;
@@ -347,15 +368,15 @@ export class PoliciesService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'policy.evaluated',
-      resourceType: 'policy_evaluation',
-      resourceId: `${resource}:${action}:${resourceId || 'any'}`,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      action: "policy.evaluated",
+      resourceType: "policy_evaluation",
+      resourceId: `${resource}:${action}:${resourceId || "any"}`,
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: {
         context,
         result: { allowed, reason, appliedPolicies },
-      }
+      },
     });
 
     return { allowed, reason, appliedPolicies };
@@ -365,7 +386,10 @@ export class PoliciesService {
    * Get roles assigned to a user
    * In a real implementation, this would query a roles/permissions service
    */
-  private async getUserRoles(userId: string, tenantId: string): Promise<string[]> {
+  private async getUserRoles(
+    userId: string,
+    tenantId: string,
+  ): Promise<string[]> {
     // Mock implementation - in a real system, this would query a roles database
     // For now, we'll return an empty array since roles aren't fully implemented
     return [];
@@ -374,13 +398,18 @@ export class PoliciesService {
   /**
    * Get policies assigned to a user
    */
-  async getUserPolicies(tenantId: string, userId: string): Promise<PolicyResponseDto[]> {
+  async getUserPolicies(
+    tenantId: string,
+    userId: string,
+  ): Promise<PolicyResponseDto[]> {
     const assignments = await this.policyAssignmentRepository.find({
-      where: { assigneeType: 'user', assigneeId: userId, tenantId },
-      relations: ['policy'],
+      where: { assigneeType: "user", assigneeId: userId, tenantId },
+      relations: ["policy"],
     });
 
-    return assignments.map(assignment => this.mapToPolicyResponse(assignment.policy));
+    return assignments.map((assignment) =>
+      this.mapToPolicyResponse(assignment.policy),
+    );
   }
 
   /**
@@ -394,7 +423,7 @@ export class PoliciesService {
 
     // Check if policy applies to the resource
     if (policy.resources && policy.resources.length > 0) {
-      const resourceMatches = policy.resources.some(policyResource =>
+      const resourceMatches = policy.resources.some((policyResource) =>
         this.matchesPattern(resource, policyResource),
       );
       if (!resourceMatches) {
@@ -404,7 +433,7 @@ export class PoliciesService {
 
     // Check if policy applies to the action
     if (policy.actions && policy.actions.length > 0) {
-      const actionMatches = policy.actions.some(policyAction =>
+      const actionMatches = policy.actions.some((policyAction) =>
         this.matchesPattern(action, policyAction),
       );
       if (!actionMatches) {
@@ -430,12 +459,12 @@ export class PoliciesService {
    * Check if a value matches a pattern (supports wildcards)
    */
   private matchesPattern(value: string, pattern: string): boolean {
-    if (pattern === '*') {
+    if (pattern === "*") {
       return true;
     }
 
-    if (pattern.includes('*')) {
-      const regex = new RegExp(pattern.replace(/\\*/g, '.*'));
+    if (pattern.includes("*")) {
+      const regex = new RegExp(pattern.replace(/\\*/g, ".*"));
       return regex.test(value);
     }
 
@@ -449,7 +478,7 @@ export class PoliciesService {
     // Simple condition evaluation - can be extended
     for (const [key, condition] of Object.entries(conditions)) {
       const value = this.getNestedValue(context, key);
-      
+
       if (!this.evaluateCondition(value, condition)) {
         return false;
       }
@@ -462,34 +491,36 @@ export class PoliciesService {
    * Evaluate a single condition
    */
   private evaluateCondition(value: any, condition: any): boolean {
-    if (typeof condition !== 'object') {
+    if (typeof condition !== "object") {
       return value === condition;
     }
 
     for (const [operator, expectedValue] of Object.entries(condition)) {
       switch (operator) {
-        case 'eq':
+        case "eq":
           if (value !== expectedValue) return false;
           break;
-        case 'ne':
+        case "ne":
           if (value === expectedValue) return false;
           break;
-        case 'in':
-          if (!Array.isArray(expectedValue) || !expectedValue.includes(value)) return false;
+        case "in":
+          if (!Array.isArray(expectedValue) || !expectedValue.includes(value))
+            return false;
           break;
-        case 'nin':
-          if (Array.isArray(expectedValue) && expectedValue.includes(value)) return false;
+        case "nin":
+          if (Array.isArray(expectedValue) && expectedValue.includes(value))
+            return false;
           break;
-        case 'gt':
+        case "gt":
           if (value <= expectedValue) return false;
           break;
-        case 'gte':
+        case "gte":
           if (value < expectedValue) return false;
           break;
-        case 'lt':
+        case "lt":
           if (value >= expectedValue) return false;
           break;
-        case 'lte':
+        case "lte":
           if (value > expectedValue) return false;
           break;
         default:
@@ -504,7 +535,7 @@ export class PoliciesService {
    * Get nested value from object using dot notation
    */
   private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+    return path.split(".").reduce((current, key) => current?.[key], obj);
   }
 
   /**

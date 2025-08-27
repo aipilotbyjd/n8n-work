@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 export interface PluginRating {
   userId: string;
@@ -8,9 +14,9 @@ export interface PluginRating {
   createdAt: Date;
 }
 
-@Entity('plugin_packages')
+@Entity("plugin_packages")
 export class PluginPackage {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -25,17 +31,17 @@ export class PluginPackage {
   @Column()
   author: string;
 
-  @Column('jsonb')
+  @Column("jsonb")
   manifest: Record<string, any>;
 
   @Column({
-    type: 'enum',
-    enum: ['pending', 'approved', 'rejected', 'published'],
-    default: 'pending'
+    type: "enum",
+    enum: ["pending", "approved", "rejected", "published"],
+    default: "pending",
   })
   status: string;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   packageData: string;
 
   @Column({ nullable: true })
@@ -47,19 +53,19 @@ export class PluginPackage {
   @Column({ nullable: true })
   packageUrl: string;
 
-  @Column({ type: 'bigint', default: 0 })
+  @Column({ type: "bigint", default: 0 })
   downloadCount: number;
 
-  @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })
+  @Column({ type: "decimal", precision: 3, scale: 2, nullable: true })
   averageRating: number;
 
-  @Column('jsonb', { default: [] })
+  @Column("jsonb", { default: [] })
   ratings: PluginRating[];
 
   @Column({ nullable: true })
   publisherId: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: "boolean", default: false })
   publisherVerified: boolean;
 
   @Column({ nullable: true })
@@ -74,13 +80,13 @@ export class PluginPackage {
   @Column({ nullable: true })
   approvedBy: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   approvedAt: Date;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   metadata: Record<string, any>;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   securityScan: Record<string, any>;
 
   @CreateDateColumn()

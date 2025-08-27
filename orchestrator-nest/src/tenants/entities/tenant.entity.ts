@@ -1,10 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Workflow } from '../../domains/workflows/entities/workflow.entity';
-import { User } from '../../auth/entities/user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from "typeorm";
+import { Workflow } from "../../domains/workflows/entities/workflow.entity";
+import { User } from "../../auth/entities/user.entity";
 
-@Entity('tenants')
+@Entity("tenants")
 export class Tenant {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -16,10 +23,10 @@ export class Tenant {
   @Column({ default: true })
   active: boolean;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   settings: Record<string, any>;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   limits: Record<string, any>;
 
   @CreateDateColumn()

@@ -6,19 +6,19 @@ import {
   UpdateDateColumn,
   ManyToOne,
   Index,
-} from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { AIAgent } from './ai-agent.entity';
-import { Execution } from '../../executions/entities/execution.entity';
-import { Tenant } from '../../tenants/entities/tenant.entity';
+} from "typeorm";
+import { ApiProperty } from "@nestjs/swagger";
+import { AIAgent } from "./ai-agent.entity";
+import { Execution } from "../../executions/entities/execution.entity";
+import { Tenant } from "../../tenants/entities/tenant.entity";
 
 export enum AIExecutionStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
-  TIMEOUT = 'timeout',
+  PENDING = "pending",
+  RUNNING = "running",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  TIMEOUT = "timeout",
 }
 
 export interface AIExecutionMetrics {
@@ -41,71 +41,71 @@ export interface AIExecutionError {
   timestamp: Date;
 }
 
-@Entity('ai_agent_executions')
-@Index(['tenantId', 'status'])
-@Index(['tenantId', 'createdAt'])
-@Index(['agentId', 'status'])
-@Index(['executionId'])
+@Entity("ai_agent_executions")
+@Index(["tenantId", "status"])
+@Index(["tenantId", "createdAt"])
+@Index(["agentId", "status"])
+@Index(["executionId"])
 export class AIAgentExecution {
   @ApiProperty({
-    description: 'Unique identifier for the AI agent execution',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: "Unique identifier for the AI agent execution",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @ApiProperty({
-    description: 'Current status of the AI execution',
+    description: "Current status of the AI execution",
     enum: AIExecutionStatus,
     example: AIExecutionStatus.COMPLETED,
   })
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: AIExecutionStatus,
     default: AIExecutionStatus.PENDING,
   })
   status: AIExecutionStatus;
 
   @ApiProperty({
-    description: 'Input data sent to the AI agent',
-    type: 'object',
+    description: "Input data sent to the AI agent",
+    type: "object",
   })
-  @Column('jsonb')
+  @Column("jsonb")
   input: any;
 
   @ApiProperty({
-    description: 'Output data received from the AI agent',
-    type: 'object',
+    description: "Output data received from the AI agent",
+    type: "object",
   })
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   output: any;
 
   @ApiProperty({
-    description: 'Configuration used for this execution',
-    type: 'object',
+    description: "Configuration used for this execution",
+    type: "object",
   })
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   config: any;
 
   @ApiProperty({
-    description: 'Execution metrics and performance data',
-    type: 'object',
+    description: "Execution metrics and performance data",
+    type: "object",
   })
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   metrics: AIExecutionMetrics;
 
   @ApiProperty({
-    description: 'Error information if execution failed',
-    type: 'object',
+    description: "Error information if execution failed",
+    type: "object",
   })
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   error: AIExecutionError;
 
   @ApiProperty({
-    description: 'Execution context and metadata',
-    type: 'object',
+    description: "Execution context and metadata",
+    type: "object",
   })
-  @Column('jsonb', { default: {} })
+  @Column("jsonb", { default: {} })
   context: {
     nodeId?: string;
     workflowId?: string;
@@ -116,42 +116,42 @@ export class AIAgentExecution {
   };
 
   @ApiProperty({
-    description: 'Timestamp when execution started',
-    example: '2024-01-15T10:30:00Z',
+    description: "Timestamp when execution started",
+    example: "2024-01-15T10:30:00Z",
   })
   @Column({ nullable: true })
   startedAt: Date;
 
   @ApiProperty({
-    description: 'Timestamp when execution completed',
-    example: '2024-01-15T10:30:30Z',
+    description: "Timestamp when execution completed",
+    example: "2024-01-15T10:30:30Z",
   })
   @Column({ nullable: true })
   completedAt: Date;
 
   @ApiProperty({
-    description: 'Maximum allowed execution time in seconds',
+    description: "Maximum allowed execution time in seconds",
     example: 300,
   })
   @Column({ default: 300 })
   timeoutSeconds: number;
 
   @ApiProperty({
-    description: 'Number of retry attempts',
+    description: "Number of retry attempts",
     example: 0,
   })
   @Column({ default: 0 })
   retryCount: number;
 
   @ApiProperty({
-    description: 'Maximum number of retries allowed',
+    description: "Maximum number of retries allowed",
     example: 3,
   })
   @Column({ default: 3 })
   maxRetries: number;
 
   @ApiProperty({
-    description: 'Priority level for execution queue',
+    description: "Priority level for execution queue",
     example: 5,
   })
   @Column({ default: 5 })
@@ -159,45 +159,47 @@ export class AIAgentExecution {
 
   // Relationships
   @ApiProperty({
-    description: 'AI agent used for this execution',
+    description: "AI agent used for this execution",
     type: () => AIAgent,
   })
-  @ManyToOne(() => AIAgent, (agent) => agent.executions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => AIAgent, (agent) => agent.executions, {
+    onDelete: "CASCADE",
+  })
   agent: AIAgent;
 
-  @Column('uuid')
+  @Column("uuid")
   agentId: string;
 
   @ApiProperty({
-    description: 'Parent workflow execution',
+    description: "Parent workflow execution",
     type: () => Execution,
   })
-  @ManyToOne(() => Execution, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Execution, { nullable: true, onDelete: "CASCADE" })
   execution: Execution;
 
-  @Column('uuid', { nullable: true })
+  @Column("uuid", { nullable: true })
   executionId: string;
 
   @ApiProperty({
-    description: 'Tenant this execution belongs to',
+    description: "Tenant this execution belongs to",
     type: () => Tenant,
   })
-  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Tenant, { onDelete: "CASCADE" })
   tenant: Tenant;
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
   @ApiProperty({
-    description: 'Timestamp when the execution was created',
-    example: '2024-01-15T10:30:00Z',
+    description: "Timestamp when the execution was created",
+    example: "2024-01-15T10:30:00Z",
   })
   @CreateDateColumn()
   createdAt: Date;
 
   @ApiProperty({
-    description: 'Timestamp when the execution was last updated',
-    example: '2024-01-15T10:30:00Z',
+    description: "Timestamp when the execution was last updated",
+    example: "2024-01-15T10:30:00Z",
   })
   @UpdateDateColumn()
   updatedAt: Date;
@@ -218,8 +220,10 @@ export class AIAgentExecution {
   }
 
   canRetry(): boolean {
-    return this.status === AIExecutionStatus.FAILED && 
-           this.retryCount < this.maxRetries;
+    return (
+      this.status === AIExecutionStatus.FAILED &&
+      this.retryCount < this.maxRetries
+    );
   }
 
   markAsStarted(): void {
@@ -251,7 +255,7 @@ export class AIAgentExecution {
     this.status = AIExecutionStatus.TIMEOUT;
     this.completedAt = new Date();
     this.error = {
-      code: 'TIMEOUT',
+      code: "TIMEOUT",
       message: `Execution timed out after ${this.timeoutSeconds} seconds`,
       timestamp: new Date(),
     };

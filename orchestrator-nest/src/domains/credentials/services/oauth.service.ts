@@ -1,12 +1,16 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { Credential } from '../entities/credential.entity';
-import { OAuthToken } from '../entities/oauth-token.entity';
-import { CredentialEncryptionService } from './credential-encryption.service';
-import { CredentialResponseDto } from '../dto/credential-response.dto';
-import axios from 'axios';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { ConfigService } from "@nestjs/config";
+import { Credential } from "../entities/credential.entity";
+import { OAuthToken } from "../entities/oauth-token.entity";
+import { CredentialEncryptionService } from "./credential-encryption.service";
+import { CredentialResponseDto } from "../dto/credential-response.dto";
+import axios from "axios";
 
 interface OAuthState {
   credentialId: string;
@@ -41,12 +45,14 @@ export class OAuthService {
   ): Promise<{ authUrl: string; state: string }> {
     const { oauthConfig } = credential.type;
     if (!oauthConfig) {
-      throw new BadRequestException('OAuth configuration not found for credential type');
+      throw new BadRequestException(
+        "OAuth configuration not found for credential type",
+      );
     }
 
     // Generate secure state
     const state = this.encryptionService.generateSecureRandomString();
-    
+
     // Store state information
     this.stateStore.set(state, {
       credentialId: credential.id,
@@ -72,16 +78,16 @@ export class OAuthService {
     // Validate state
     const stateData = this.stateStore.get(state);
     if (!stateData) {
-      throw new BadRequestException('Invalid or expired OAuth state');
+      throw new BadRequestException("Invalid or expired OAuth state");
     }
 
     if (stateData.tenantId !== tenantId) {
-      throw new BadRequestException('Tenant mismatch in OAuth flow');
+      throw new BadRequestException("Tenant mismatch in OAuth flow");
     }
 
     if (Date.now() - stateData.timestamp > this.stateExpiration) {
       this.stateStore.delete(state);
-      throw new BadRequestException('OAuth state expired');
+      throw new BadRequestException("OAuth state expired");
     }
 
     // Clean up state
@@ -90,11 +96,11 @@ export class OAuthService {
     // Get credential
     const credential = await this.credentialRepository.findOne({
       where: { id: stateData.credentialId, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
 
     if (!credential) {
-      throw new NotFoundException('Credential not found');
+      throw new NotFoundException("Credential not found");
     }
 
     // Exchange code for tokens
@@ -132,7 +138,7 @@ export class OAuthService {
     });
 
     if (!oauthToken) {
-      throw new NotFoundException('OAuth token not found');
+      throw new NotFoundException("OAuth token not found");
     }
 
     // Decrypt refresh token
@@ -142,7 +148,10 @@ export class OAuthService {
     );
 
     // Refresh tokens
-    const newTokens = await this.refreshAccessToken(credential, decryptedRefreshToken);
+    const newTokens = await this.refreshAccessToken(
+      credential,
+      decryptedRefreshToken,
+    );
 
     // Update stored tokens
     await this.updateTokens(oauthToken, newTokens);
@@ -170,15 +179,19 @@ export class OAuthService {
   /**
    * Build OAuth authorization URL
    */
-  private buildAuthUrl(oauthConfig: any, state: string, redirectUrl?: string): string {
+  private buildAuthUrl(
+    oauthConfig: any,
+    state: string,
+    redirectUrl?: string,
+  ): string {
     const baseUrl = oauthConfig.authUrl;
     const params = new URLSearchParams({
       client_id: oauthConfig.clientId,
       redirect_uri: redirectUrl || oauthConfig.redirectUri,
-      response_type: 'code',
+      response_type: "code",
       state,
-      scope: Array.isArray(oauthConfig.scopes) 
-        ? oauthConfig.scopes.join(' ') 
+      scope: Array.isArray(oauthConfig.scopes)
+        ? oauthConfig.scopes.join(" ")
         : oauthConfig.scopes,
     });
 
@@ -195,66 +208,90 @@ export class OAuthService {
   /**
    * Exchange authorization code for access tokens
    */
-  private async exchangeCodeForTokens(credential: Credential, code: string): Promise<any> {
+  private async exchangeCodeForTokens(
+    credential: Credential,
+    code: string,
+  ): Promise<any> {
     const { oauthConfig } = credential.type;
-    
+
     try {
-      const response = await axios.post(oauthConfig.tokenUrl, {
-        client_id: oauthConfig.clientId,
-        client_secret: oauthConfig.clientSecret,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: oauthConfig.redirectUri,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
+      const response = await axios.post(
+        oauthConfig.tokenUrl,
+        {
+          client_id: oauthConfig.clientId,
+          client_secret: oauthConfig.clientSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: oauthConfig.redirectUri,
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+        },
+      );
 
       return response.data;
     } catch (error) {
-      throw new BadRequestException(`Failed to exchange code for tokens: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to exchange code for tokens: ${error.message}`,
+      );
     }
   }
 
   /**
    * Refresh access token using refresh token
    */
-  private async refreshAccessToken(credential: Credential, refreshToken: string): Promise<any> {
+  private async refreshAccessToken(
+    credential: Credential,
+    refreshToken: string,
+  ): Promise<any> {
     const { oauthConfig } = credential.type;
-    
+
     try {
-      const response = await axios.post(oauthConfig.tokenUrl, {
-        client_id: oauthConfig.clientId,
-        client_secret: oauthConfig.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
+      const response = await axios.post(
+        oauthConfig.tokenUrl,
+        {
+          client_id: oauthConfig.clientId,
+          client_secret: oauthConfig.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: "refresh_token",
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+        },
+      );
 
       return response.data;
     } catch (error) {
-      throw new BadRequestException(`Failed to refresh token: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to refresh token: ${error.message}`,
+      );
     }
   }
 
   /**
    * Store OAuth tokens
    */
-  private async storeTokens(credential: Credential, tokens: any): Promise<void> {
+  private async storeTokens(
+    credential: Credential,
+    tokens: any,
+  ): Promise<void> {
     // Encrypt tokens
     const encryptedAccessToken = await this.encryptionService.encrypt(
       tokens.access_token,
       credential.tenantId,
     );
-    
+
     const encryptedRefreshToken = tokens.refresh_token
-      ? await this.encryptionService.encrypt(tokens.refresh_token, credential.tenantId)
+      ? await this.encryptionService.encrypt(
+          tokens.refresh_token,
+          credential.tenantId,
+        )
       : null;
 
     // Calculate expiration date
@@ -270,10 +307,10 @@ export class OAuthService {
     if (existingToken) {
       existingToken.accessToken = encryptedAccessToken;
       existingToken.refreshToken = encryptedRefreshToken;
-      existingToken.tokenType = tokens.token_type || 'Bearer';
+      existingToken.tokenType = tokens.token_type || "Bearer";
       existingToken.expiresIn = tokens.expires_in;
       existingToken.expiresAt = expiresAt;
-      existingToken.scopes = tokens.scope ? tokens.scope.split(' ') : [];
+      existingToken.scopes = tokens.scope ? tokens.scope.split(" ") : [];
       existingToken.updatedAt = new Date();
 
       await this.oauthTokenRepository.save(existingToken);
@@ -282,10 +319,10 @@ export class OAuthService {
         credentialId: credential.id,
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
-        tokenType: tokens.token_type || 'Bearer',
+        tokenType: tokens.token_type || "Bearer",
         expiresIn: tokens.expires_in,
         expiresAt,
-        scopes: tokens.scope ? tokens.scope.split(' ') : [],
+        scopes: tokens.scope ? tokens.scope.split(" ") : [],
         tenantId: credential.tenantId,
       });
 
@@ -296,14 +333,20 @@ export class OAuthService {
   /**
    * Update existing OAuth tokens
    */
-  private async updateTokens(oauthToken: OAuthToken, tokens: any): Promise<void> {
+  private async updateTokens(
+    oauthToken: OAuthToken,
+    tokens: any,
+  ): Promise<void> {
     const encryptedAccessToken = await this.encryptionService.encrypt(
       tokens.access_token,
       oauthToken.tenantId,
     );
-    
+
     const encryptedRefreshToken = tokens.refresh_token
-      ? await this.encryptionService.encrypt(tokens.refresh_token, oauthToken.tenantId)
+      ? await this.encryptionService.encrypt(
+          tokens.refresh_token,
+          oauthToken.tenantId,
+        )
       : oauthToken.refreshToken;
 
     const expiresAt = tokens.expires_in

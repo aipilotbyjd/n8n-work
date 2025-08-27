@@ -3,10 +3,10 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { trace } from '@opentelemetry/api';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { trace } from "@opentelemetry/api";
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -20,8 +20,13 @@ export interface ApiResponse<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, ApiResponse<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<ApiResponse<T>> {
     const span = trace.getActiveSpan();
     const traceId = span?.spanContext().traceId;
 
@@ -32,7 +37,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
         meta: {
           timestamp: new Date().toISOString(),
           traceId,
-          version: '1.0',
+          version: "1.0",
         },
       })),
     );

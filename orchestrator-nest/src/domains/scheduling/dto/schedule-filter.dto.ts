@@ -1,18 +1,25 @@
-import { IsOptional, IsUUID, IsBoolean, IsNumber, Min, Max } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsUUID,
+  IsBoolean,
+  IsNumber,
+  Min,
+  Max,
+} from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 
 export class ScheduleFilterDto {
   @ApiPropertyOptional({
-    description: 'Filter by workflow ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: "Filter by workflow ID",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
   @IsOptional()
   @IsUUID()
   workflowId?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by active status',
+    description: "Filter by active status",
     example: true,
   })
   @IsOptional()
@@ -21,7 +28,7 @@ export class ScheduleFilterDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Number of results to return',
+    description: "Number of results to return",
     example: 50,
     minimum: 1,
     maximum: 100,
@@ -34,7 +41,7 @@ export class ScheduleFilterDto {
   limit?: number;
 
   @ApiPropertyOptional({
-    description: 'Number of results to skip',
+    description: "Number of results to skip",
     example: 0,
     minimum: 0,
   })

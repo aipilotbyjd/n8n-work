@@ -1,13 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, In, Between } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Execution, ExecutionStatus, ExecutionMode } from './entities/execution.entity';
-import { StartExecutionDto } from './dto/start-execution.dto';
-import { ExecutionResponseDto } from './dto/execution-response.dto';
-import { ExecutionFilterDto } from './dto/execution-filter.dto';
-import { RetryExecutionDto } from './dto/retry-execution.dto';
-import { AuditLogService } from '../audit/audit-log.service';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindManyOptions, In, Between } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import {
+  Execution,
+  ExecutionStatus,
+  ExecutionMode,
+} from "./entities/execution.entity";
+import { StartExecutionDto } from "./dto/start-execution.dto";
+import { ExecutionResponseDto } from "./dto/execution-response.dto";
+import { ExecutionFilterDto } from "./dto/execution-filter.dto";
+import { RetryExecutionDto } from "./dto/retry-execution.dto";
+import { AuditLogService } from "../audit/audit-log.service";
 
 @Injectable()
 export class ExecutionsService {
@@ -25,7 +34,9 @@ export class ExecutionsService {
     tenantId: string,
     userId: string,
   ): Promise<ExecutionResponseDto> {
-    this.logger.log(`Starting execution for workflow ${startExecutionDto.workflowId}`);
+    this.logger.log(
+      `Starting execution for workflow ${startExecutionDto.workflowId}`,
+    );
 
     const execution = this.executionRepository.create({
       ...startExecutionDto,
@@ -38,7 +49,7 @@ export class ExecutionsService {
     const savedExecution = await this.executionRepository.save(execution);
 
     // Emit event to trigger execution
-    this.eventEmitter.emit('execution.started', {
+    this.eventEmitter.emit("execution.started", {
       execution: savedExecution,
       tenantId,
       userId,
@@ -46,13 +57,13 @@ export class ExecutionsService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'execution.started',
-      resourceType: 'execution',
+      action: "execution.started",
+      resourceType: "execution",
       resourceId: savedExecution.id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       newValues: { workflowId: startExecutionDto.workflowId },
     });
 
@@ -63,31 +74,38 @@ export class ExecutionsService {
     tenantId: string,
     filters: ExecutionFilterDto,
   ): Promise<ExecutionResponseDto[]> {
-    const queryBuilder = this.executionRepository.createQueryBuilder('execution')
-      .where('execution.tenantId = :tenantId', { tenantId });
+    const queryBuilder = this.executionRepository
+      .createQueryBuilder("execution")
+      .where("execution.tenantId = :tenantId", { tenantId });
 
     // Apply filters
     if (filters.workflowId) {
-      queryBuilder.andWhere('execution.workflowId = :workflowId', { workflowId: filters.workflowId });
+      queryBuilder.andWhere("execution.workflowId = :workflowId", {
+        workflowId: filters.workflowId,
+      });
     }
 
     if (filters.status) {
-      queryBuilder.andWhere('execution.status = :status', { status: filters.status });
+      queryBuilder.andWhere("execution.status = :status", {
+        status: filters.status,
+      });
     }
 
     if (filters.mode) {
-      queryBuilder.andWhere('execution.mode = :mode', { mode: filters.mode });
+      queryBuilder.andWhere("execution.mode = :mode", { mode: filters.mode });
     }
 
     // Pagination
     queryBuilder
-      .orderBy('execution.createdAt', 'DESC')
+      .orderBy("execution.createdAt", "DESC")
       .limit(filters.limit || 50)
       .offset(filters.offset || 0);
 
     const executions = await queryBuilder.getMany();
 
-    return executions.map(execution => this.toResponseDto(execution, filters.includeData));
+    return executions.map((execution) =>
+      this.toResponseDto(execution, filters.includeData),
+    );
   }
 
   async getExecution(
@@ -114,17 +132,20 @@ export class ExecutionsService {
   ): Promise<ExecutionResponseDto> {
     const execution = await this.getExecutionEntity(id, tenantId);
 
-    if (execution.status !== ExecutionStatus.RUNNING && execution.status !== ExecutionStatus.PENDING) {
-      throw new BadRequestException('Execution cannot be stopped');
+    if (
+      execution.status !== ExecutionStatus.RUNNING &&
+      execution.status !== ExecutionStatus.PENDING
+    ) {
+      throw new BadRequestException("Execution cannot be stopped");
     }
 
     execution.status = ExecutionStatus.CANCELLED;
     execution.completedAt = new Date();
-    
+
     const savedExecution = await this.executionRepository.save(execution);
 
     // Emit event to stop execution
-    this.eventEmitter.emit('execution.stopped', {
+    this.eventEmitter.emit("execution.stopped", {
       execution: savedExecution,
       tenantId,
       userId,
@@ -132,13 +153,13 @@ export class ExecutionsService {
 
     // Log audit event
     await this.auditService.log({
-      action: 'execution.stopped',
-      resourceType: 'execution',
+      action: "execution.stopped",
+      resourceType: "execution",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     return this.toResponseDto(savedExecution);
@@ -153,11 +174,11 @@ export class ExecutionsService {
     const originalExecution = await this.getExecutionEntity(id, tenantId);
 
     if (originalExecution.status !== ExecutionStatus.FAILED) {
-      throw new BadRequestException('Only failed executions can be retried');
+      throw new BadRequestException("Only failed executions can be retried");
     }
 
     if (originalExecution.retryCount >= originalExecution.maxRetries) {
-      throw new BadRequestException('Maximum retry attempts exceeded');
+      throw new BadRequestException("Maximum retry attempts exceeded");
     }
 
     // Create new execution for retry
@@ -179,7 +200,7 @@ export class ExecutionsService {
     const savedExecution = await this.executionRepository.save(retryExecution);
 
     // Emit event to trigger retry
-    this.eventEmitter.emit('execution.retried', {
+    this.eventEmitter.emit("execution.retried", {
       execution: savedExecution,
       originalExecution,
       tenantId,
@@ -189,24 +210,28 @@ export class ExecutionsService {
     return this.toResponseDto(savedExecution);
   }
 
-  async deleteExecution(id: string, tenantId: string, userId: string): Promise<void> {
+  async deleteExecution(
+    id: string,
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
     const execution = await this.getExecutionEntity(id, tenantId);
 
     if (execution.status === ExecutionStatus.RUNNING) {
-      throw new BadRequestException('Cannot delete running execution');
+      throw new BadRequestException("Cannot delete running execution");
     }
 
     await this.executionRepository.remove(execution);
 
     // Log audit event
     await this.auditService.log({
-      action: 'execution.deleted',
-      resourceType: 'execution',
+      action: "execution.deleted",
+      resourceType: "execution",
       resourceId: id,
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       oldValues: { workflowId: execution.workflowId, status: execution.status },
     });
   }
@@ -215,33 +240,47 @@ export class ExecutionsService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const queryBuilder = this.executionRepository.createQueryBuilder('execution')
-      .where('execution.tenantId = :tenantId', { tenantId })
-      .andWhere('execution.createdAt >= :startDate', { startDate });
+    const queryBuilder = this.executionRepository
+      .createQueryBuilder("execution")
+      .where("execution.tenantId = :tenantId", { tenantId })
+      .andWhere("execution.createdAt >= :startDate", { startDate });
 
     if (workflowId) {
-      queryBuilder.andWhere('execution.workflowId = :workflowId', { workflowId });
+      queryBuilder.andWhere("execution.workflowId = :workflowId", {
+        workflowId,
+      });
     }
 
     const executions = await queryBuilder.getMany();
 
     const totalExecutions = executions.length;
-    const successfulExecutions = executions.filter(e => e.status === ExecutionStatus.SUCCESS).length;
-    const failedExecutions = executions.filter(e => e.status === ExecutionStatus.FAILED).length;
+    const successfulExecutions = executions.filter(
+      (e) => e.status === ExecutionStatus.SUCCESS,
+    ).length;
+    const failedExecutions = executions.filter(
+      (e) => e.status === ExecutionStatus.FAILED,
+    ).length;
 
-    const executionsByStatus = executions.reduce((acc, execution) => {
-      acc[execution.status] = (acc[execution.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const executionsByStatus = executions.reduce(
+      (acc, execution) => {
+        acc[execution.status] = (acc[execution.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const executionsByMode = executions.reduce((acc, execution) => {
-      acc[execution.mode] = (acc[execution.mode] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const executionsByMode = executions.reduce(
+      (acc, execution) => {
+        acc[execution.mode] = (acc[execution.mode] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const averageExecutionTime = executions
-      .filter(e => e.durationMs)
-      .reduce((sum, e) => sum + e.durationMs, 0) / executions.length || 0;
+    const averageExecutionTime =
+      executions
+        .filter((e) => e.durationMs)
+        .reduce((sum, e) => sum + e.durationMs, 0) / executions.length || 0;
 
     return {
       totalExecutions,
@@ -261,15 +300,15 @@ export class ExecutionsService {
     nodeId?: string,
   ) {
     const execution = await this.getExecutionEntity(id, tenantId);
-    
+
     // In a real implementation, this would query a separate logs table/service
     return {
       executionId: id,
       logs: [
         {
           timestamp: execution.createdAt,
-          level: 'info',
-          message: 'Execution started',
+          level: "info",
+          message: "Execution started",
           nodeId: null,
           data: { status: execution.status },
         },
@@ -280,19 +319,19 @@ export class ExecutionsService {
 
   async getExecutionTimeline(id: string, tenantId: string) {
     const execution = await this.getExecutionEntity(id, tenantId);
-    
+
     const timeline = [];
-    
+
     timeline.push({
       timestamp: execution.createdAt,
-      event: 'execution_created',
+      event: "execution_created",
       status: ExecutionStatus.PENDING,
     });
 
     if (execution.startedAt) {
       timeline.push({
         timestamp: execution.startedAt,
-        event: 'execution_started',
+        event: "execution_started",
         status: ExecutionStatus.RUNNING,
       });
     }
@@ -300,7 +339,7 @@ export class ExecutionsService {
     if (execution.completedAt) {
       timeline.push({
         timestamp: execution.completedAt,
-        event: 'execution_completed',
+        event: "execution_completed",
         status: execution.status,
         duration: execution.durationMs,
       });
@@ -317,42 +356,49 @@ export class ExecutionsService {
     tenantId: string,
     userId: string,
   ) {
-    const queryBuilder = this.executionRepository.createQueryBuilder('execution')
-      .where('execution.tenantId = :tenantId', { tenantId });
+    const queryBuilder = this.executionRepository
+      .createQueryBuilder("execution")
+      .where("execution.tenantId = :tenantId", { tenantId });
 
     // Apply criteria
     if (criteria.status) {
-      queryBuilder.andWhere('execution.status = :status', { status: criteria.status });
+      queryBuilder.andWhere("execution.status = :status", {
+        status: criteria.status,
+      });
     }
 
     if (criteria.workflowId) {
-      queryBuilder.andWhere('execution.workflowId = :workflowId', { workflowId: criteria.workflowId });
+      queryBuilder.andWhere("execution.workflowId = :workflowId", {
+        workflowId: criteria.workflowId,
+      });
     }
 
     const executions = await queryBuilder.getMany();
-    const executionIds = executions.map(e => e.id);
+    const executionIds = executions.map((e) => e.id);
 
     if (executionIds.length === 0) {
       return { deletedCount: 0, criteria };
     }
 
     // Prevent deletion of running executions
-    const runningExecutions = executions.filter(e => e.status === ExecutionStatus.RUNNING);
+    const runningExecutions = executions.filter(
+      (e) => e.status === ExecutionStatus.RUNNING,
+    );
     if (runningExecutions.length > 0) {
-      throw new BadRequestException('Cannot delete running executions');
+      throw new BadRequestException("Cannot delete running executions");
     }
 
     await this.executionRepository.delete({ id: In(executionIds) });
 
     // Log audit event
     await this.auditService.log({
-      action: 'execution.bulk_deleted',
-      resourceType: 'execution',
-      resourceId: 'bulk',
+      action: "execution.bulk_deleted",
+      resourceType: "execution",
+      resourceId: "bulk",
       tenantId,
       userId,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
+      ipAddress: "unknown",
+      userAgent: "unknown",
       oldValues: { deletedCount: executionIds.length, criteria },
     });
 
@@ -367,13 +413,18 @@ export class ExecutionsService {
     tenantId: string,
     userId: string,
   ) {
-    const queryBuilder = this.executionRepository.createQueryBuilder('execution')
-      .where('execution.tenantId = :tenantId', { tenantId })
-      .andWhere('execution.status = :status', { status: ExecutionStatus.FAILED });
+    const queryBuilder = this.executionRepository
+      .createQueryBuilder("execution")
+      .where("execution.tenantId = :tenantId", { tenantId })
+      .andWhere("execution.status = :status", {
+        status: ExecutionStatus.FAILED,
+      });
 
     // Apply additional criteria
     if (criteria.workflowId) {
-      queryBuilder.andWhere('execution.workflowId = :workflowId', { workflowId: criteria.workflowId });
+      queryBuilder.andWhere("execution.workflowId = :workflowId", {
+        workflowId: criteria.workflowId,
+      });
     }
 
     const failedExecutions = await queryBuilder.getMany();
@@ -382,7 +433,12 @@ export class ExecutionsService {
 
     for (const execution of failedExecutions) {
       if (execution.retryCount < execution.maxRetries) {
-        const retryExecution = await this.retryExecution(execution.id, {}, tenantId, userId);
+        const retryExecution = await this.retryExecution(
+          execution.id,
+          {},
+          tenantId,
+          userId,
+        );
         retriedExecutions.push(retryExecution.id);
       } else {
         skippedExecutions.push(execution.id);
@@ -396,7 +452,10 @@ export class ExecutionsService {
     };
   }
 
-  private async getExecutionEntity(id: string, tenantId: string): Promise<Execution> {
+  private async getExecutionEntity(
+    id: string,
+    tenantId: string,
+  ): Promise<Execution> {
     const execution = await this.executionRepository.findOne({
       where: { id, tenantId },
     });

@@ -1,23 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
 
-@Entity('invoice_line_items')
+@Entity("invoice_line_items")
 export class InvoiceLineItem {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
   description: string;
 
-  @Column('int')
+  @Column("int")
   quantity: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column("decimal", { precision: 10, scale: 2 })
   unitPrice: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column("decimal", { precision: 10, scale: 2 })
   amount: number;
 
-  @ManyToOne('Invoice', 'lineItems')
+  @ManyToOne("Invoice", "lineItems")
   invoice: Invoice;
 
   @Column()

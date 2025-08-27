@@ -7,6 +7,6 @@ export function initializeOpenTelemetry(): void {
     return;
   }
 
-  console.log('OpenTelemetry tracing initialization skipped - not configured');
+  console.log("OpenTelemetry tracing initialization skipped - not configured");
   isInitialized = true;
 }

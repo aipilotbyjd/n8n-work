@@ -1,8 +1,12 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Subscription, Invoice, InvoiceStatus } from './entities';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Subscription, Invoice, InvoiceStatus } from "./entities";
 import {
   CreateSubscriptionDto,
   UpdateSubscriptionDto,
@@ -12,15 +16,15 @@ import {
   InvoiceResponseDto,
   UsageMetricsDto,
   PaymentMethodDto,
-} from './dto/index';
-import { AuditLogService } from '../audit/audit-log.service';
+} from "./dto/index";
+import { AuditLogService } from "../audit/audit-log.service";
 
 export interface BillingPlan {
   id: string;
   name: string;
   price: number;
   currency: string;
-  interval: 'monthly' | 'yearly';
+  interval: "monthly" | "yearly";
   features: string[];
   limits: {
     maxWorkflows: number;
@@ -60,12 +64,12 @@ export class BillingService {
   async getBillingPlans(): Promise<BillingPlan[]> {
     return [
       {
-        id: 'starter',
-        name: 'Starter',
+        id: "starter",
+        name: "Starter",
         price: 0,
-        currency: 'USD',
-        interval: 'monthly',
-        features: ['Basic workflows', 'Community support'],
+        currency: "USD",
+        interval: "monthly",
+        features: ["Basic workflows", "Community support"],
         limits: {
           maxWorkflows: 5,
           maxExecutions: 1000,
@@ -75,16 +79,16 @@ export class BillingService {
         },
       },
       {
-        id: 'professional',
-        name: 'Professional',
+        id: "professional",
+        name: "Professional",
         price: 29,
-        currency: 'USD',
-        interval: 'monthly',
+        currency: "USD",
+        interval: "monthly",
         features: [
-          'Unlimited workflows',
-          'Priority support',
-          'Advanced integrations',
-          'Custom nodes',
+          "Unlimited workflows",
+          "Priority support",
+          "Advanced integrations",
+          "Custom nodes",
         ],
         limits: {
           maxWorkflows: -1, // unlimited
@@ -95,17 +99,17 @@ export class BillingService {
         },
       },
       {
-        id: 'enterprise',
-        name: 'Enterprise',
+        id: "enterprise",
+        name: "Enterprise",
         price: 99,
-        currency: 'USD',
-        interval: 'monthly',
+        currency: "USD",
+        interval: "monthly",
         features: [
-          'Everything in Professional',
-          'Dedicated support',
-          'SSO integration',
-          'Custom deployment',
-          'Advanced security',
+          "Everything in Professional",
+          "Dedicated support",
+          "SSO integration",
+          "Custom deployment",
+          "Advanced security",
         ],
         limits: {
           maxWorkflows: -1,
@@ -127,18 +131,20 @@ export class BillingService {
     userId: string,
   ): Promise<SubscriptionResponseDto> {
     const existingSubscription = await this.subscriptionRepository.findOne({
-      where: { tenantId, status: 'active' },
+      where: { tenantId, status: "active" },
     });
 
     if (existingSubscription) {
-      throw new BadRequestException('Tenant already has an active subscription');
+      throw new BadRequestException(
+        "Tenant already has an active subscription",
+      );
     }
 
     const plans = await this.getBillingPlans();
-    const plan = plans.find(p => p.id === createSubscriptionDto.planId);
+    const plan = plans.find((p) => p.id === createSubscriptionDto.planId);
 
     if (!plan) {
-      throw new BadRequestException('Invalid billing plan');
+      throw new BadRequestException("Invalid billing plan");
     }
 
     const subscription = this.subscriptionRepository.create({
@@ -148,7 +154,7 @@ export class BillingService {
       amount: plan.price,
       currency: plan.currency,
       interval: plan.interval,
-      status: 'active',
+      status: "active",
       currentPeriodStart: new Date(),
       currentPeriodEnd: this.calculatePeriodEnd(new Date(), plan.interval),
       paymentMethodId: createSubscriptionDto.paymentMethodId,
@@ -156,10 +162,11 @@ export class BillingService {
       limits: plan.limits,
     });
 
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     // Emit subscription created event
-    this.eventEmitter.emit('subscription.created', {
+    this.eventEmitter.emit("subscription.created", {
       tenantId,
       subscriptionId: savedSubscription.id,
       planId: plan.id,
@@ -170,12 +177,12 @@ export class BillingService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'subscription.created',
-      resourceType: 'subscription',
+      action: "subscription.created",
+      resourceType: "subscription",
       resourceId: savedSubscription.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: { planId: plan.id, amount: plan.price }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: { planId: plan.id, amount: plan.price },
     });
 
     return this.mapToSubscriptionResponse(savedSubscription);
@@ -195,15 +202,15 @@ export class BillingService {
     });
 
     if (!subscription) {
-      throw new NotFoundException('Subscription not found');
+      throw new NotFoundException("Subscription not found");
     }
 
     if (updateSubscriptionDto.planId) {
       const plans = await this.getBillingPlans();
-      const newPlan = plans.find(p => p.id === updateSubscriptionDto.planId);
+      const newPlan = plans.find((p) => p.id === updateSubscriptionDto.planId);
 
       if (!newPlan) {
-        throw new BadRequestException('Invalid billing plan');
+        throw new BadRequestException("Invalid billing plan");
       }
 
       subscription.planId = newPlan.id;
@@ -223,10 +230,11 @@ export class BillingService {
       subscription.status = updateSubscriptionDto.status;
     }
 
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     // Emit subscription updated event
-    this.eventEmitter.emit('subscription.updated', {
+    this.eventEmitter.emit("subscription.updated", {
       tenantId,
       subscriptionId: savedSubscription.id,
       oldPlanId: subscription.planId,
@@ -237,12 +245,12 @@ export class BillingService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'subscription.updated',
-      resourceType: 'subscription',
+      action: "subscription.updated",
+      resourceType: "subscription",
       resourceId: savedSubscription.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: updateSubscriptionDto
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: updateSubscriptionDto,
     });
 
     return this.mapToSubscriptionResponse(savedSubscription);
@@ -251,9 +259,11 @@ export class BillingService {
   /**
    * Get subscription by tenant
    */
-  async getSubscriptionByTenant(tenantId: string): Promise<SubscriptionResponseDto | null> {
+  async getSubscriptionByTenant(
+    tenantId: string,
+  ): Promise<SubscriptionResponseDto | null> {
     const subscription = await this.subscriptionRepository.findOne({
-      where: { tenantId, status: 'active' },
+      where: { tenantId, status: "active" },
     });
 
     if (!subscription) {
@@ -276,16 +286,17 @@ export class BillingService {
     });
 
     if (!subscription) {
-      throw new NotFoundException('Subscription not found');
+      throw new NotFoundException("Subscription not found");
     }
 
-    subscription.status = 'cancelled';
+    subscription.status = "cancelled";
     subscription.cancelledAt = new Date();
 
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     // Emit subscription cancelled event
-    this.eventEmitter.emit('subscription.cancelled', {
+    this.eventEmitter.emit("subscription.cancelled", {
       tenantId,
       subscriptionId: savedSubscription.id,
     });
@@ -294,11 +305,11 @@ export class BillingService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'subscription.cancelled',
-      resourceType: 'subscription',
+      action: "subscription.cancelled",
+      resourceType: "subscription",
       resourceId: savedSubscription.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown'
+      ipAddress: "unknown",
+      userAgent: "unknown",
     });
 
     return this.mapToSubscriptionResponse(savedSubscription);
@@ -307,7 +318,10 @@ export class BillingService {
   /**
    * Check if tenant has reached usage limits
    */
-  async checkUsageLimits(tenantId: string, usageMetrics: UsageMetricsDto): Promise<{
+  async checkUsageLimits(
+    tenantId: string,
+    usageMetrics: UsageMetricsDto,
+  ): Promise<{
     isWithinLimits: boolean;
     violations: string[];
     usage: UsageMetrics;
@@ -317,7 +331,7 @@ export class BillingService {
     if (!subscription) {
       return {
         isWithinLimits: false,
-        violations: ['No active subscription'],
+        violations: ["No active subscription"],
         usage: this.mapToUsageMetrics(usageMetrics),
       };
     }
@@ -325,24 +339,46 @@ export class BillingService {
     const violations: string[] = [];
     const limits = subscription.limits;
 
-    if (limits.maxWorkflows !== -1 && usageMetrics.workflowsCount > limits.maxWorkflows) {
-      violations.push(`Workflows limit exceeded: ${usageMetrics.workflowsCount}/${limits.maxWorkflows}`);
+    if (
+      limits.maxWorkflows !== -1 &&
+      usageMetrics.workflowsCount > limits.maxWorkflows
+    ) {
+      violations.push(
+        `Workflows limit exceeded: ${usageMetrics.workflowsCount}/${limits.maxWorkflows}`,
+      );
     }
 
-    if (limits.maxExecutions !== -1 && usageMetrics.executionsCount > limits.maxExecutions) {
-      violations.push(`Executions limit exceeded: ${usageMetrics.executionsCount}/${limits.maxExecutions}`);
+    if (
+      limits.maxExecutions !== -1 &&
+      usageMetrics.executionsCount > limits.maxExecutions
+    ) {
+      violations.push(
+        `Executions limit exceeded: ${usageMetrics.executionsCount}/${limits.maxExecutions}`,
+      );
     }
 
-    if (limits.maxStorage !== -1 && usageMetrics.storageUsed > limits.maxStorage) {
-      violations.push(`Storage limit exceeded: ${usageMetrics.storageUsed}GB/${limits.maxStorage}GB`);
+    if (
+      limits.maxStorage !== -1 &&
+      usageMetrics.storageUsed > limits.maxStorage
+    ) {
+      violations.push(
+        `Storage limit exceeded: ${usageMetrics.storageUsed}GB/${limits.maxStorage}GB`,
+      );
     }
 
     if (limits.maxUsers !== -1 && usageMetrics.usersCount > limits.maxUsers) {
-      violations.push(`Users limit exceeded: ${usageMetrics.usersCount}/${limits.maxUsers}`);
+      violations.push(
+        `Users limit exceeded: ${usageMetrics.usersCount}/${limits.maxUsers}`,
+      );
     }
 
-    if (limits.maxIntegrations !== -1 && usageMetrics.integrationsCount > limits.maxIntegrations) {
-      violations.push(`Integrations limit exceeded: ${usageMetrics.integrationsCount}/${limits.maxIntegrations}`);
+    if (
+      limits.maxIntegrations !== -1 &&
+      usageMetrics.integrationsCount > limits.maxIntegrations
+    ) {
+      violations.push(
+        `Integrations limit exceeded: ${usageMetrics.integrationsCount}/${limits.maxIntegrations}`,
+      );
     }
 
     return {
@@ -374,7 +410,7 @@ export class BillingService {
     const savedInvoice = await this.invoiceRepository.save(invoice);
 
     // Emit invoice created event
-    this.eventEmitter.emit('invoice.created', {
+    this.eventEmitter.emit("invoice.created", {
       tenantId,
       invoiceId: savedInvoice.id,
       amount: savedInvoice.amount,
@@ -384,12 +420,15 @@ export class BillingService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'invoice.created',
-      resourceType: 'invoice',
+      action: "invoice.created",
+      resourceType: "invoice",
       resourceId: savedInvoice.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: { amount: savedInvoice.amount, currency: savedInvoice.currency }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: {
+        amount: savedInvoice.amount,
+        currency: savedInvoice.currency,
+      },
     });
 
     return this.mapToInvoiceResponse(savedInvoice);
@@ -401,10 +440,10 @@ export class BillingService {
   async getInvoicesByTenant(tenantId: string): Promise<InvoiceResponseDto[]> {
     const invoices = await this.invoiceRepository.find({
       where: { tenantId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
 
-    return invoices.map(invoice => this.mapToInvoiceResponse(invoice));
+    return invoices.map((invoice) => this.mapToInvoiceResponse(invoice));
   }
 
   /**
@@ -421,11 +460,11 @@ export class BillingService {
     });
 
     if (!invoice) {
-      throw new NotFoundException('Invoice not found');
+      throw new NotFoundException("Invoice not found");
     }
 
-    if (invoice.status === 'paid') {
-      throw new BadRequestException('Invoice is already paid');
+    if (invoice.status === "paid") {
+      throw new BadRequestException("Invoice is already paid");
     }
 
     // Here you would integrate with a payment processor like Stripe
@@ -437,7 +476,7 @@ export class BillingService {
     const savedInvoice = await this.invoiceRepository.save(invoice);
 
     // Emit payment processed event
-    this.eventEmitter.emit('payment.processed', {
+    this.eventEmitter.emit("payment.processed", {
       tenantId,
       invoiceId: savedInvoice.id,
       amount: savedInvoice.amount,
@@ -447,12 +486,12 @@ export class BillingService {
     await this.auditLogService.log({
       tenantId,
       userId,
-      action: 'payment.processed',
-      resourceType: 'invoice',
+      action: "payment.processed",
+      resourceType: "invoice",
       resourceId: savedInvoice.id,
-      ipAddress: 'unknown',
-      userAgent: 'unknown',
-      newValues: { amount: savedInvoice.amount, paymentMethodId }
+      ipAddress: "unknown",
+      userAgent: "unknown",
+      newValues: { amount: savedInvoice.amount, paymentMethodId },
     });
 
     return this.mapToInvoiceResponse(savedInvoice);
@@ -463,10 +502,10 @@ export class BillingService {
    */
   private calculatePeriodEnd(start: Date, interval: string): Date {
     const end = new Date(start);
-    
-    if (interval === 'monthly') {
+
+    if (interval === "monthly") {
       end.setMonth(end.getMonth() + 1);
-    } else if (interval === 'yearly') {
+    } else if (interval === "yearly") {
       end.setFullYear(end.getFullYear() + 1);
     }
 
@@ -476,7 +515,9 @@ export class BillingService {
   /**
    * Map subscription entity to response DTO
    */
-  private mapToSubscriptionResponse(subscription: Subscription): SubscriptionResponseDto {
+  private mapToSubscriptionResponse(
+    subscription: Subscription,
+  ): SubscriptionResponseDto {
     return {
       id: subscription.id,
       tenantId: subscription.tenantId,

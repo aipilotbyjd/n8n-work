@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, FindOneOptions } from 'typeorm';
-import { Credential } from './entities/credential.entity';
-import { CredentialType } from './entities/credential-type.entity';
-import { OAuthToken } from './entities/oauth-token.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindManyOptions, FindOneOptions } from "typeorm";
+import { Credential } from "./entities/credential.entity";
+import { CredentialType } from "./entities/credential-type.entity";
+import { OAuthToken } from "./entities/oauth-token.entity";
 
 @Injectable()
 export class CredentialsRepository {
@@ -17,26 +17,36 @@ export class CredentialsRepository {
   ) {}
 
   // Credential operations
-  async createCredential(credentialData: Partial<Credential>): Promise<Credential> {
+  async createCredential(
+    credentialData: Partial<Credential>,
+  ): Promise<Credential> {
     const credential = this.credentialRepository.create(credentialData);
     return this.credentialRepository.save(credential);
   }
 
-  async findCredentials(options: FindManyOptions<Credential>): Promise<Credential[]> {
+  async findCredentials(
+    options: FindManyOptions<Credential>,
+  ): Promise<Credential[]> {
     return this.credentialRepository.find(options);
   }
 
-  async findCredentialById(id: string, tenantId: string): Promise<Credential | null> {
+  async findCredentialById(
+    id: string,
+    tenantId: string,
+  ): Promise<Credential | null> {
     return this.credentialRepository.findOne({
       where: { id, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
   }
 
-  async findCredentialByName(name: string, tenantId: string): Promise<Credential | null> {
+  async findCredentialByName(
+    name: string,
+    tenantId: string,
+  ): Promise<Credential | null> {
     return this.credentialRepository.findOne({
       where: { name, tenantId },
-      relations: ['type'],
+      relations: ["type"],
     });
   }
 
@@ -54,11 +64,14 @@ export class CredentialsRepository {
     });
   }
 
-  async findCredentialsByType(typeId: string, tenantId: string): Promise<Credential[]> {
+  async findCredentialsByType(
+    typeId: string,
+    tenantId: string,
+  ): Promise<Credential[]> {
     return this.credentialRepository.find({
       where: { typeId, tenantId },
-      relations: ['type'],
-      order: { createdAt: 'DESC' },
+      relations: ["type"],
+      order: { createdAt: "DESC" },
     });
   }
 
@@ -66,7 +79,7 @@ export class CredentialsRepository {
   async findCredentialTypes(): Promise<CredentialType[]> {
     return this.credentialTypeRepository.find({
       where: { isActive: true },
-      order: { displayName: 'ASC' },
+      order: { displayName: "ASC" },
     });
   }
 
@@ -82,12 +95,16 @@ export class CredentialsRepository {
     });
   }
 
-  async createCredentialType(typeData: Partial<CredentialType>): Promise<CredentialType> {
+  async createCredentialType(
+    typeData: Partial<CredentialType>,
+  ): Promise<CredentialType> {
     const credentialType = this.credentialTypeRepository.create(typeData);
     return this.credentialTypeRepository.save(credentialType);
   }
 
-  async updateCredentialType(credentialType: CredentialType): Promise<CredentialType> {
+  async updateCredentialType(
+    credentialType: CredentialType,
+  ): Promise<CredentialType> {
     return this.credentialTypeRepository.save(credentialType);
   }
 
@@ -113,9 +130,9 @@ export class CredentialsRepository {
 
   async findExpiredOAuthTokens(): Promise<OAuthToken[]> {
     return this.oauthTokenRepository
-      .createQueryBuilder('token')
-      .where('token.expiresAt < :now', { now: new Date() })
-      .andWhere('token.refreshToken IS NOT NULL')
+      .createQueryBuilder("token")
+      .where("token.expiresAt < :now", { now: new Date() })
+      .andWhere("token.refreshToken IS NOT NULL")
       .getMany();
   }
 }

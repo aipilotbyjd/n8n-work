@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class AlertingService {
@@ -12,13 +12,17 @@ export class AlertingService {
     console.log(`ALERT RESOLVED [${channel}]:`, alert);
   }
 
-  async sendSLOAlert(sloName: string, status: string, details: any): Promise<void> {
-    await this.sendAlert('default', {
-      type: 'SLO_VIOLATION',
+  async sendSLOAlert(
+    sloName: string,
+    status: string,
+    details: any,
+  ): Promise<void> {
+    await this.sendAlert("default", {
+      type: "SLO_VIOLATION",
       slo: sloName,
       status,
       details,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 }

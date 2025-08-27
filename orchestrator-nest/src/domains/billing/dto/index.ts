@@ -8,7 +8,7 @@ export class CreateSubscriptionDto {
 export class UpdateSubscriptionDto {
   planId?: string;
   paymentMethodId?: string;
-  status?: 'active' | 'cancelled' | 'past_due' | 'unpaid' | 'trialing';
+  status?: "active" | "cancelled" | "past_due" | "unpaid" | "trialing";
   cancelAtPeriodEnd?: boolean;
   cancellationReason?: string;
 }

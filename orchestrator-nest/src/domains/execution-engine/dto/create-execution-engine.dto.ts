@@ -1,18 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsObject } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsNotEmpty, IsObject } from "class-validator";
 
 export class CreateExecutionEngineDto {
   @ApiProperty({
-    description: 'The ID of the workflow to execute',
-    example: 'uuid-v4',
+    description: "The ID of the workflow to execute",
+    example: "wf_12345",
   })
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   workflowId: string;
 
   @ApiProperty({
-    description: 'The input data for the execution',
-    example: { name: 'John Doe' },
+    description: "The input data for the workflow execution",
+    example: { key: "value" },
   })
   @IsObject()
   input: Record<string, any>;

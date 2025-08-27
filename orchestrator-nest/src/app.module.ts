@@ -124,7 +124,6 @@ import { ExecutionEngineModule } from './domains/execution-engine/execution-engi
     BillingModule,
     AuditModule,
     ExecutionEngineModule,
-    NestEngineModule,
   ],
   controllers: [HealthController],
   providers: [

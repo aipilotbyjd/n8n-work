@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
   HttpStatus,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -17,19 +17,19 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
-} from '@nestjs/swagger';
-import { MonitoringService } from './monitoring.service';
-import { MetricsCollectorService } from './metrics-collector.service';
-import { AlertingService } from './alerting.service';
-import { HealthCheckService } from './health-check.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { TenantGuard } from '../../auth/guards/tenant.guard';
-import { GetCurrentUser } from '../../auth/decorators/get-current-user.decorator';
-import { GetCurrentTenant } from '../../auth/decorators/get-current-tenant.decorator';
+} from "@nestjs/swagger";
+import { MonitoringService } from "./monitoring.service";
+import { MetricsCollectorService } from "./metrics-collector.service";
+import { AlertingService } from "./alerting.service";
+import { HealthCheckService } from "./health-check.service";
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { TenantGuard } from "../../auth/guards/tenant.guard";
+import { GetCurrentUser } from "../../auth/decorators/get-current-user.decorator";
+import { GetCurrentTenant } from "../../auth/decorators/get-current-tenant.decorator";
 
-@ApiTags('monitoring')
+@ApiTags("monitoring")
 @ApiBearerAuth()
-@Controller('monitoring')
+@Controller("monitoring")
 export class MonitoringController {
   constructor(
     private readonly monitoringService: MonitoringService,
@@ -38,54 +38,54 @@ export class MonitoringController {
     private readonly healthCheckService: HealthCheckService,
   ) {}
 
-  @Get('health')
-  @ApiOperation({ summary: 'Get system health status' })
+  @Get("health")
+  @ApiOperation({ summary: "Get system health status" })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns system health status',
+    description: "Returns system health status",
   })
   async getHealthStatus() {
     return this.healthCheckService.getSystemHealth();
   }
 
-  @Get('health/detailed')
+  @Get("health/detailed")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get detailed health check results' })
+  @ApiOperation({ summary: "Get detailed health check results" })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns detailed health check results',
+    description: "Returns detailed health check results",
   })
   async getDetailedHealth(@GetCurrentTenant() tenantId: string) {
     return this.healthCheckService.getDetailedHealth(tenantId);
   }
 
-  @Get('metrics/system')
+  @Get("metrics/system")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get system metrics' })
+  @ApiOperation({ summary: "Get system metrics" })
   @ApiQuery({
-    name: 'startTime',
-    description: 'Start time for metrics',
+    name: "startTime",
+    description: "Start time for metrics",
     required: false,
   })
   @ApiQuery({
-    name: 'endTime',
-    description: 'End time for metrics',
+    name: "endTime",
+    description: "End time for metrics",
     required: false,
   })
   @ApiQuery({
-    name: 'interval',
-    description: 'Metrics interval',
+    name: "interval",
+    description: "Metrics interval",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns system metrics',
+    description: "Returns system metrics",
   })
   async getSystemMetrics(
     @GetCurrentTenant() tenantId: string,
-    @Query('startTime') startTime?: string,
-    @Query('endTime') endTime?: string,
-    @Query('interval') interval?: string,
+    @Query("startTime") startTime?: string,
+    @Query("endTime") endTime?: string,
+    @Query("interval") interval?: string,
   ) {
     return this.metricsCollectorService.getSystemMetrics(
       tenantId,
@@ -95,27 +95,27 @@ export class MonitoringController {
     );
   }
 
-  @Get('metrics/application')
+  @Get("metrics/application")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get application metrics' })
+  @ApiOperation({ summary: "Get application metrics" })
   @ApiQuery({
-    name: 'startTime',
-    description: 'Start time for metrics',
+    name: "startTime",
+    description: "Start time for metrics",
     required: false,
   })
   @ApiQuery({
-    name: 'endTime',
-    description: 'End time for metrics',
+    name: "endTime",
+    description: "End time for metrics",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns application metrics',
+    description: "Returns application metrics",
   })
   async getApplicationMetrics(
     @GetCurrentTenant() tenantId: string,
-    @Query('startTime') startTime?: string,
-    @Query('endTime') endTime?: string,
+    @Query("startTime") startTime?: string,
+    @Query("endTime") endTime?: string,
   ) {
     return this.metricsCollectorService.getApplicationMetrics(
       tenantId,
@@ -124,226 +124,243 @@ export class MonitoringController {
     );
   }
 
-  @Get('metrics/performance')
+  @Get("metrics/performance")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get performance metrics' })
+  @ApiOperation({ summary: "Get performance metrics" })
   @ApiQuery({
-    name: 'type',
-    description: 'Performance metric type',
+    name: "type",
+    description: "Performance metric type",
     required: false,
   })
   @ApiQuery({
-    name: 'period',
-    description: 'Time period',
+    name: "period",
+    description: "Time period",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns performance metrics',
+    description: "Returns performance metrics",
   })
   async getPerformanceMetrics(
     @GetCurrentTenant() tenantId: string,
-    @Query('type') type?: string,
-    @Query('period') period?: string,
+    @Query("type") type?: string,
+    @Query("period") period?: string,
   ) {
     return this.monitoringService.getPerformanceMetrics(tenantId, type, period);
   }
 
-  @Get('alerts')
+  @Get("alerts")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get alerts for tenant' })
+  @ApiOperation({ summary: "Get alerts for tenant" })
   @ApiQuery({
-    name: 'status',
-    description: 'Alert status filter',
+    name: "status",
+    description: "Alert status filter",
     required: false,
   })
   @ApiQuery({
-    name: 'severity',
-    description: 'Alert severity filter',
+    name: "severity",
+    description: "Alert severity filter",
     required: false,
   })
   @ApiQuery({
-    name: 'limit',
-    description: 'Number of alerts to return',
+    name: "limit",
+    description: "Number of alerts to return",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns alerts',
+    description: "Returns alerts",
   })
   async getAlerts(
     @GetCurrentTenant() tenantId: string,
-    @Query('status') status?: string,
-    @Query('severity') severity?: string,
-    @Query('limit') limit?: string,
+    @Query("status") status?: string,
+    @Query("severity") severity?: string,
+    @Query("limit") limit?: string,
   ) {
-    return this.alertingService.getAlerts(tenantId, status, severity, parseInt(limit) || 50);
+    return this.alertingService.getAlerts(
+      tenantId,
+      status,
+      severity,
+      parseInt(limit) || 50,
+    );
   }
 
-  @Post('alerts')
+  @Post("alerts")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Create a new alert rule' })
+  @ApiOperation({ summary: "Create a new alert rule" })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'Alert rule created successfully',
+    description: "Alert rule created successfully",
   })
   async createAlertRule(
     @GetCurrentTenant() tenantId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser("id") userId: string,
     @Body() createAlertDto: any,
   ) {
-    return this.alertingService.createAlertRule(tenantId, createAlertDto, userId);
+    return this.alertingService.createAlertRule(
+      tenantId,
+      createAlertDto,
+      userId,
+    );
   }
 
-  @Put('alerts/:alertId/acknowledge')
+  @Put("alerts/:alertId/acknowledge")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Acknowledge an alert' })
+  @ApiOperation({ summary: "Acknowledge an alert" })
   @ApiParam({
-    name: 'alertId',
-    description: 'Alert ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    name: "alertId",
+    description: "Alert ID",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Alert acknowledged successfully',
+    description: "Alert acknowledged successfully",
   })
   async acknowledgeAlert(
     @GetCurrentTenant() tenantId: string,
-    @GetCurrentUser('id') userId: string,
-    @Param('alertId') alertId: string,
+    @GetCurrentUser("id") userId: string,
+    @Param("alertId") alertId: string,
   ) {
     return this.alertingService.acknowledgeAlert(tenantId, alertId, userId);
   }
 
-  @Put('alerts/:alertId/resolve')
+  @Put("alerts/:alertId/resolve")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Resolve an alert' })
+  @ApiOperation({ summary: "Resolve an alert" })
   @ApiParam({
-    name: 'alertId',
-    description: 'Alert ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    name: "alertId",
+    description: "Alert ID",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Alert resolved successfully',
+    description: "Alert resolved successfully",
   })
   async resolveAlert(
     @GetCurrentTenant() tenantId: string,
-    @GetCurrentUser('id') userId: string,
-    @Param('alertId') alertId: string,
+    @GetCurrentUser("id") userId: string,
+    @Param("alertId") alertId: string,
   ) {
     return this.alertingService.resolveAlert(tenantId, alertId, userId);
   }
 
-  @Get('dashboard')
+  @Get("dashboard")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get monitoring dashboard data' })
+  @ApiOperation({ summary: "Get monitoring dashboard data" })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns monitoring dashboard data',
+    description: "Returns monitoring dashboard data",
   })
   async getMonitoringDashboard(@GetCurrentTenant() tenantId: string) {
     return this.monitoringService.getMonitoringDashboard(tenantId);
   }
 
-  @Get('reports/uptime')
+  @Get("reports/uptime")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get uptime report' })
+  @ApiOperation({ summary: "Get uptime report" })
   @ApiQuery({
-    name: 'startDate',
-    description: 'Start date for report',
+    name: "startDate",
+    description: "Start date for report",
     required: false,
   })
   @ApiQuery({
-    name: 'endDate',
-    description: 'End date for report',
+    name: "endDate",
+    description: "End date for report",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns uptime report',
+    description: "Returns uptime report",
   })
   async getUptimeReport(
     @GetCurrentTenant() tenantId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
   ) {
     return this.monitoringService.getUptimeReport(tenantId, startDate, endDate);
   }
 
-  @Get('reports/performance')
+  @Get("reports/performance")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get performance report' })
+  @ApiOperation({ summary: "Get performance report" })
   @ApiQuery({
-    name: 'startDate',
-    description: 'Start date for report',
+    name: "startDate",
+    description: "Start date for report",
     required: false,
   })
   @ApiQuery({
-    name: 'endDate',
-    description: 'End date for report',
+    name: "endDate",
+    description: "End date for report",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns performance report',
+    description: "Returns performance report",
   })
   async getPerformanceReport(
     @GetCurrentTenant() tenantId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string,
   ) {
-    return this.monitoringService.getPerformanceReport(tenantId, startDate, endDate);
+    return this.monitoringService.getPerformanceReport(
+      tenantId,
+      startDate,
+      endDate,
+    );
   }
 
-  @Post('metrics/custom')
+  @Post("metrics/custom")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Record custom metrics' })
+  @ApiOperation({ summary: "Record custom metrics" })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'Custom metrics recorded successfully',
+    description: "Custom metrics recorded successfully",
   })
   async recordCustomMetrics(
     @GetCurrentTenant() tenantId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser("id") userId: string,
     @Body() metricsData: any,
   ) {
-    return this.metricsCollectorService.recordCustomMetrics(tenantId, metricsData, userId);
+    return this.metricsCollectorService.recordCustomMetrics(
+      tenantId,
+      metricsData,
+      userId,
+    );
   }
 
-  @Get('logs/errors')
+  @Get("logs/errors")
   @UseGuards(JwtAuthGuard, TenantGuard)
-  @ApiOperation({ summary: 'Get error logs' })
+  @ApiOperation({ summary: "Get error logs" })
   @ApiQuery({
-    name: 'startTime',
-    description: 'Start time for logs',
+    name: "startTime",
+    description: "Start time for logs",
     required: false,
   })
   @ApiQuery({
-    name: 'endTime',
-    description: 'End time for logs',
+    name: "endTime",
+    description: "End time for logs",
     required: false,
   })
   @ApiQuery({
-    name: 'level',
-    description: 'Log level filter',
+    name: "level",
+    description: "Log level filter",
     required: false,
   })
   @ApiQuery({
-    name: 'limit',
-    description: 'Number of logs to return',
+    name: "limit",
+    description: "Number of logs to return",
     required: false,
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Returns error logs',
+    description: "Returns error logs",
   })
   async getErrorLogs(
     @GetCurrentTenant() tenantId: string,
-    @Query('startTime') startTime?: string,
-    @Query('endTime') endTime?: string,
-    @Query('level') level?: string,
-    @Query('limit') limit?: string,
+    @Query("startTime") startTime?: string,
+    @Query("endTime") endTime?: string,
+    @Query("level") level?: string,
+    @Query("limit") limit?: string,
   ) {
     return this.monitoringService.getErrorLogs(
       tenantId,

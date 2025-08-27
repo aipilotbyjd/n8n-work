@@ -1,8 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { CredentialType } from '../entities/credential-type.entity';
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
-import axios from 'axios';
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { CredentialType } from "../entities/credential-type.entity";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
+import axios from "axios";
 
 @Injectable()
 export class CredentialValidationService {
@@ -22,8 +22,8 @@ export class CredentialValidationService {
 
     if (!valid) {
       const errors = validate.errors
-        ?.map(error => `${error.instancePath || 'root'} ${error.message}`)
-        .join(', ');
+        ?.map((error) => `${error.instancePath || "root"} ${error.message}`)
+        .join(", ");
       throw new BadRequestException(`Credential validation failed: ${errors}`);
     }
   }
@@ -31,31 +31,37 @@ export class CredentialValidationService {
   /**
    * Test credential connection
    */
-  async testCredential(data: any, credentialType: CredentialType): Promise<boolean> {
+  async testCredential(
+    data: any,
+    credentialType: CredentialType,
+  ): Promise<boolean> {
     try {
       switch (credentialType.name) {
-        case 'httpBasicAuth':
+        case "httpBasicAuth":
           return this.testHttpBasicAuth(data);
-        case 'httpHeaderAuth':
+        case "httpHeaderAuth":
           return this.testHttpHeaderAuth(data);
-        case 'httpQueryAuth':
+        case "httpQueryAuth":
           return this.testHttpQueryAuth(data);
-        case 'apiKey':
+        case "apiKey":
           return this.testApiKey(data);
-        case 'googleApi':
+        case "googleApi":
           return this.testGoogleApi(data);
-        case 'slackApi':
+        case "slackApi":
           return this.testSlackApi(data);
-        case 'githubApi':
+        case "githubApi":
           return this.testGitHubApi(data);
-        case 'awsApi':
+        case "awsApi":
           return this.testAwsApi(data);
         default:
           // For unknown types, just validate that required fields are present
           return this.basicValidation(data, credentialType.schema);
       }
     } catch (error) {
-      console.error(`Credential test failed for type ${credentialType.name}:`, error);
+      console.error(
+        `Credential test failed for type ${credentialType.name}:`,
+        error,
+      );
       return false;
     }
   }
@@ -138,7 +144,7 @@ export class CredentialValidationService {
     }
 
     // For generic API key, we can only validate format
-    return typeof data.apiKey === 'string' && data.apiKey.length > 0;
+    return typeof data.apiKey === "string" && data.apiKey.length > 0;
   }
 
   /**
@@ -154,7 +160,7 @@ export class CredentialValidationService {
         // Test with a simple API call
         const response = await axios.get(
           `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${data.apiKey}`,
-          { timeout: 10000 }
+          { timeout: 10000 },
         );
         return response.status === 200;
       }
@@ -181,15 +187,15 @@ export class CredentialValidationService {
 
     try {
       const response = await axios.post(
-        'https://slack.com/api/auth.test',
+        "https://slack.com/api/auth.test",
         {},
         {
           headers: {
-            'Authorization': `Bearer ${data.accessToken}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${data.accessToken}`,
+            "Content-Type": "application/json",
           },
           timeout: 10000,
-        }
+        },
       );
 
       return response.data?.ok === true;
@@ -207,10 +213,10 @@ export class CredentialValidationService {
     }
 
     try {
-      const response = await axios.get('https://api.github.com/user', {
+      const response = await axios.get("https://api.github.com/user", {
         headers: {
-          'Authorization': `token ${data.accessToken}`,
-          'User-Agent': 'N8N-Work-Credential-Test',
+          Authorization: `token ${data.accessToken}`,
+          "User-Agent": "N8N-Work-Credential-Test",
         },
         timeout: 10000,
       });

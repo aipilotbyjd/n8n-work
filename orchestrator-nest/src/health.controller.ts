@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get } from "@nestjs/common";
 import {
   HealthCheck,
   HealthCheckService,
@@ -7,12 +7,12 @@ import {
   DiskHealthIndicator,
   HealthIndicatorResult,
   HealthIndicatorStatus,
-} from '@nestjs/terminus';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
+} from "@nestjs/terminus";
+import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ConfigService } from "@nestjs/config";
 
-@ApiTags('Health')
-@Controller('health')
+@ApiTags("Health")
+@Controller("health")
 export class HealthController {
   constructor(
     private health: HealthCheckService,
@@ -24,25 +24,26 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
-  @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({ status: 200, description: 'Service is healthy' })
-  @ApiResponse({ status: 503, description: 'Service is unhealthy' })
+  @ApiOperation({ summary: "Health check endpoint" })
+  @ApiResponse({ status: 200, description: "Service is healthy" })
+  @ApiResponse({ status: 503, description: "Service is unhealthy" })
   check() {
     return this.health.check([
       // Database health
-      () => this.db.pingCheck('database'),
+      () => this.db.pingCheck("database"),
 
       // Memory health - alert if using more than 512MB heap
-      () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
+      () => this.memory.checkHeap("memory_heap", 512 * 1024 * 1024),
 
       // Memory health - alert if RSS exceeds 1GB
-      () => this.memory.checkRSS('memory_rss', 1024 * 1024 * 1024),
+      () => this.memory.checkRSS("memory_rss", 1024 * 1024 * 1024),
 
       // Storage health - alert if disk usage exceeds 80%
-      () => this.disk.checkStorage('storage', {
-        path: '/',
-        thresholdPercent: 0.8,
-      }),
+      () =>
+        this.disk.checkStorage("storage", {
+          path: "/",
+          thresholdPercent: 0.8,
+        }),
 
       // Custom application health checks
       () => this.checkRedisConnection(),
@@ -51,27 +52,27 @@ export class HealthController {
     ]);
   }
 
-  @Get('liveness')
-  @ApiOperation({ summary: 'Liveness probe for Kubernetes' })
-  @ApiResponse({ status: 200, description: 'Service is alive' })
+  @Get("liveness")
+  @ApiOperation({ summary: "Liveness probe for Kubernetes" })
+  @ApiResponse({ status: 200, description: "Service is alive" })
   liveness() {
     return {
-      status: 'ok',
+      status: "ok",
       timestamp: new Date().toISOString(),
-      service: 'n8n-work-orchestrator',
-      version: this.configService.get('app.version'),
+      service: "n8n-work-orchestrator",
+      version: this.configService.get("app.version"),
     };
   }
 
-  @Get('readiness')
+  @Get("readiness")
   @HealthCheck()
-  @ApiOperation({ summary: 'Readiness probe for Kubernetes' })
-  @ApiResponse({ status: 200, description: 'Service is ready' })
-  @ApiResponse({ status: 503, description: 'Service is not ready' })
+  @ApiOperation({ summary: "Readiness probe for Kubernetes" })
+  @ApiResponse({ status: 200, description: "Service is ready" })
+  @ApiResponse({ status: 503, description: "Service is not ready" })
   readiness() {
     return this.health.check([
       // Core dependencies that must be available for service to be ready
-      () => this.db.pingCheck('database'),
+      () => this.db.pingCheck("database"),
       () => this.checkRedisConnection(),
       () => this.checkMessageQueue(),
     ]);
@@ -83,8 +84,8 @@ export class HealthController {
       // For now, we'll simulate a Redis check
       return {
         redis: {
-          status: 'up' as HealthIndicatorStatus,
-          message: 'Redis connection is healthy',
+          status: "up" as HealthIndicatorStatus,
+          message: "Redis connection is healthy",
         },
       };
     } catch (error) {
@@ -98,8 +99,8 @@ export class HealthController {
       // For now, we'll simulate a message queue check
       return {
         messageQueue: {
-          status: 'up' as HealthIndicatorStatus,
-          message: 'Message queue connection is healthy',
+          status: "up" as HealthIndicatorStatus,
+          message: "Message queue connection is healthy",
         },
       };
     } catch (error) {
@@ -110,20 +111,22 @@ export class HealthController {
   private checkExternalServices(): HealthIndicatorResult {
     try {
       // Check connectivity to critical external services
-      const engineUrl = this.configService.get('services.engineGrpcUrl');
-      const nodeRunnerUrl = this.configService.get('services.nodeRunnerUrl');
+      const engineUrl = this.configService.get("services.engineGrpcUrl");
+      const nodeRunnerUrl = this.configService.get("services.nodeRunnerUrl");
 
       return {
         externalServices: {
-          status: 'up' as HealthIndicatorStatus,
+          status: "up" as HealthIndicatorStatus,
           services: {
-            engine: { url: engineUrl, status: 'up' },
-            nodeRunner: { url: nodeRunnerUrl, status: 'up' },
+            engine: { url: engineUrl, status: "up" },
+            nodeRunner: { url: nodeRunnerUrl, status: "up" },
           },
         },
       };
     } catch (error) {
-      throw new Error(`External services health check failed: ${error.message}`);
+      throw new Error(
+        `External services health check failed: ${error.message}`,
+      );
     }
   }
 }

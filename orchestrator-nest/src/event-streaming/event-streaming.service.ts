@@ -1,9 +1,14 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RedisService } from '../redis/redis.service';
-import { WebSocketService } from '../websocket/websocket.service';
-import { GrpcClientService } from '../grpc/grpc-client.service';
-import { QueueService } from '../queue/queue.service';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { RedisService } from "../redis/redis.service";
+import { WebSocketService } from "../websocket/websocket.service";
+import { QueueService } from "../queue/queue.service";
+import { ExecutionEngineFactory } from "../domains/execution-engine/execution-engine.factory";
 
 interface EventStreamConfig {
   redis: {
@@ -21,7 +26,7 @@ interface EventStreamConfig {
   };
   sync: {
     stateCheckInterval: number;
-    conflictResolution: 'last_write_wins' | 'merge' | 'manual';
+    conflictResolution: "last_write_wins" | "merge" | "manual";
     enableVersioning: boolean;
   };
 }
@@ -86,14 +91,14 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
     private readonly eventEmitter: EventEmitter2,
     private readonly redisService: RedisService,
     private readonly webSocketService: WebSocketService,
-    private readonly grpcClientService: GrpcClientService,
     private readonly queueService: QueueService,
+    private readonly executionEngineFactory: ExecutionEngineFactory,
   ) {
     this.config = {
       redis: {
-        streamKey: 'n8n-work:events',
-        consumerGroup: 'orchestrator',
-        consumerId: `orchestrator-${process.env.HOSTNAME || 'local'}-${Date.now()}`,
+        streamKey: "n8n-work:events",
+        consumerGroup: "orchestrator",
+        consumerId: `orchestrator-${process.env.HOSTNAME || "local"}-${Date.now()}`,
         maxLength: 10000,
         blockTime: 5000,
       },
@@ -105,7 +110,7 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
       },
       sync: {
         stateCheckInterval: 30000, // 30 seconds
-        conflictResolution: 'last_write_wins',
+        conflictResolution: "last_write_wins",
         enableVersioning: true,
       },
     };
@@ -117,32 +122,37 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
       await this.startEventProcessing();
       await this.startStateSynchronization();
       this.setupEventListeners();
-      
-      this.logger.log('Event streaming service initialized');
+
+      this.logger.log("Event streaming service initialized");
     } catch (error) {
-      this.logger.error(`Failed to initialize event streaming: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to initialize event streaming: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
 
   async onModuleDestroy() {
     this.isProcessing = false;
-    
+
     if (this.processingInterval) {
       clearInterval(this.processingInterval);
     }
-    
+
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
     }
 
-    this.logger.log('Event streaming service destroyed');
+    this.logger.log("Event streaming service destroyed");
   }
 
   /**
    * Publish an event to the stream
    */
-  async publishEvent(event: Omit<StreamEvent, 'id' | 'timestamp' | 'version'>): Promise<string> {
+  async publishEvent(
+    event: Omit<StreamEvent, "id" | "timestamp" | "version">,
+  ): Promise<string> {
     try {
       const fullEvent: StreamEvent = {
         ...event,
@@ -154,23 +164,26 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
       // Add to Redis stream
       const eventId = await this.redisService.xAdd(
         this.config.redis.streamKey,
-        '*',
-        'event',
+        "*",
+        "event",
         JSON.stringify(fullEvent),
         {
           maxLength: this.config.redis.maxLength,
           approximateMaxLength: true,
-        }
+        },
       );
 
       this.logger.debug(`Event published: ${eventId}`, { event: fullEvent });
 
       // Emit locally for immediate processing
-      this.eventEmitter.emit('stream.event', fullEvent);
+      this.eventEmitter.emit("stream.event", fullEvent);
 
       return eventId;
     } catch (error) {
-      this.logger.error(`Failed to publish event: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to publish event: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -178,11 +191,13 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   /**
    * Update workflow state
    */
-  async updateWorkflowState(workflowState: Partial<WorkflowState>): Promise<void> {
+  async updateWorkflowState(
+    workflowState: Partial<WorkflowState>,
+  ): Promise<void> {
     try {
       const key = `workflow:${workflowState.tenantId}:${workflowState.workflowId}`;
       const currentState = this.workflowStates.get(key);
-      
+
       const newState: WorkflowState = {
         ...currentState,
         ...workflowState,
@@ -203,8 +218,8 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
 
       // Publish state change event
       await this.publishEvent({
-        type: 'workflow.state.updated',
-        source: 'orchestrator',
+        type: "workflow.state.updated",
+        source: "orchestrator",
         tenantId: newState.tenantId,
         resourceId: newState.workflowId,
         payload: {
@@ -216,9 +231,14 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.debug(`Workflow state updated: ${key}`, { version: newState.version });
+      this.logger.debug(`Workflow state updated: ${key}`, {
+        version: newState.version,
+      });
     } catch (error) {
-      this.logger.error(`Failed to update workflow state: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update workflow state: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -226,11 +246,13 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   /**
    * Update execution state
    */
-  async updateExecutionState(executionState: Partial<ExecutionState>): Promise<void> {
+  async updateExecutionState(
+    executionState: Partial<ExecutionState>,
+  ): Promise<void> {
     try {
       const key = `execution:${executionState.tenantId}:${executionState.executionId}`;
       const currentState = this.executionStates.get(key);
-      
+
       const newState: ExecutionState = {
         ...currentState,
         ...executionState,
@@ -249,8 +271,8 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
 
       // Publish state change event
       await this.publishEvent({
-        type: 'execution.state.updated',
-        source: 'orchestrator',
+        type: "execution.state.updated",
+        source: "orchestrator",
         tenantId: newState.tenantId,
         resourceId: newState.executionId,
         payload: {
@@ -268,7 +290,7 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         newState.tenantId,
         newState.executionId,
         newState.workflowId,
-        'state_updated',
+        "state_updated",
         {
           status: newState.status,
           progress: newState.progress,
@@ -276,9 +298,14 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         },
       );
 
-      this.logger.debug(`Execution state updated: ${key}`, { status: newState.status });
+      this.logger.debug(`Execution state updated: ${key}`, {
+        status: newState.status,
+      });
     } catch (error) {
-      this.logger.error(`Failed to update execution state: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update execution state: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -286,12 +313,15 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   /**
    * Get workflow state
    */
-  async getWorkflowState(tenantId: string, workflowId: string): Promise<WorkflowState | null> {
+  async getWorkflowState(
+    tenantId: string,
+    workflowId: string,
+  ): Promise<WorkflowState | null> {
     const key = `workflow:${tenantId}:${workflowId}`;
-    
+
     // Try memory first
     let state = this.workflowStates.get(key);
-    
+
     if (!state) {
       // Try Redis
       const redisData = await this.redisService.get(`state:${key}`);
@@ -307,12 +337,15 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   /**
    * Get execution state
    */
-  async getExecutionState(tenantId: string, executionId: string): Promise<ExecutionState | null> {
+  async getExecutionState(
+    tenantId: string,
+    executionId: string,
+  ): Promise<ExecutionState | null> {
     const key = `execution:${tenantId}:${executionId}`;
-    
+
     // Try memory first
     let state = this.executionStates.get(key);
-    
+
     if (!state) {
       // Try Redis
       const redisData = await this.redisService.get(`state:${key}`);
@@ -331,35 +364,38 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   async synchronizeStates(): Promise<void> {
     try {
       // Get all state keys from Redis
-      const stateKeys = await this.redisService.keys('state:*');
-      
+      const stateKeys = await this.redisService.keys("state:*");
+
       for (const key of stateKeys) {
         try {
           const redisData = await this.redisService.get(key);
           if (!redisData) continue;
 
           const state = JSON.parse(redisData);
-          const localKey = key.replace('state:', '');
+          const localKey = key.replace("state:", "");
 
-          if (key.startsWith('state:workflow:')) {
+          if (key.startsWith("state:workflow:")) {
             const localState = this.workflowStates.get(localKey);
             if (!localState || localState.version < state.version) {
               this.workflowStates.set(localKey, state);
-              
+
               // Emit sync event
-              this.eventEmitter.emit('workflow.state.synced', {
+              this.eventEmitter.emit("workflow.state.synced", {
                 workflowId: state.workflowId,
                 tenantId: state.tenantId,
                 version: state.version,
               });
             }
-          } else if (key.startsWith('state:execution:')) {
+          } else if (key.startsWith("state:execution:")) {
             const localState = this.executionStates.get(localKey);
-            if (!localState || new Date(localState.lastHeartbeat) < new Date(state.lastHeartbeat)) {
+            if (
+              !localState ||
+              new Date(localState.lastHeartbeat) < new Date(state.lastHeartbeat)
+            ) {
               this.executionStates.set(localKey, state);
-              
+
               // Emit sync event
-              this.eventEmitter.emit('execution.state.synced', {
+              this.eventEmitter.emit("execution.state.synced", {
                 executionId: state.executionId,
                 tenantId: state.tenantId,
                 status: state.status,
@@ -373,7 +409,10 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.debug(`Synchronized ${stateKeys.length} states`);
     } catch (error) {
-      this.logger.error(`State synchronization failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `State synchronization failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -388,38 +427,41 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
       const results = await this.redisService.xReadGroup(
         this.config.redis.consumerGroup,
         this.config.redis.consumerId,
-        [this.config.redis.streamKey, '>'],
+        [this.config.redis.streamKey, ">"],
         {
           count: this.config.processing.batchSize,
           block: this.config.redis.blockTime,
-        }
+        },
       );
 
       if (!results || results.length === 0) return;
 
       const events = results[0]?.messages || [];
-      
+
       // Process events in batches
-      const chunks = this.chunkArray(events, this.config.processing.concurrency);
-      
+      const chunks = this.chunkArray(
+        events,
+        this.config.processing.concurrency,
+      );
+
       for (const chunk of chunks) {
-        await Promise.all(
-          chunk.map(event => this.processEvent(event))
-        );
+        await Promise.all(chunk.map((event) => this.processEvent(event)));
       }
 
       // Acknowledge processed events
       if (events.length > 0) {
-        const eventIds = events.map(e => e.id);
+        const eventIds = events.map((e) => e.id);
         await this.redisService.xAck(
           this.config.redis.streamKey,
           this.config.redis.consumerGroup,
-          ...eventIds
+          ...eventIds,
         );
       }
-
     } catch (error) {
-      this.logger.error(`Event processing error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Event processing error: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -431,26 +473,28 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
       const eventData = JSON.parse(eventMessage.message.event);
       const event: StreamEvent = eventData;
 
-      this.logger.debug(`Processing event: ${event.type}`, { eventId: event.id });
+      this.logger.debug(`Processing event: ${event.type}`, {
+        eventId: event.id,
+      });
 
       // Route event based on type
       switch (event.type) {
-        case 'workflow.state.updated':
+        case "workflow.state.updated":
           await this.handleWorkflowStateUpdated(event);
           break;
-        case 'execution.state.updated':
+        case "execution.state.updated":
           await this.handleExecutionStateUpdated(event);
           break;
-        case 'execution.started':
+        case "execution.started":
           await this.handleExecutionStarted(event);
           break;
-        case 'execution.completed':
+        case "execution.completed":
           await this.handleExecutionCompleted(event);
           break;
-        case 'step.started':
+        case "step.started":
           await this.handleStepStarted(event);
           break;
-        case 'step.completed':
+        case "step.completed":
           await this.handleStepCompleted(event);
           break;
         default:
@@ -459,14 +503,16 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
 
       // Emit to local event bus
       this.eventEmitter.emit(`stream.${event.type}`, event);
-
     } catch (error) {
-      this.logger.error(`Failed to process event: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to process event: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
   // Event handlers continue...
-  
+
   private async initializeRedisStreams(): Promise<void> {
     try {
       // Create consumer group if it doesn't exist
@@ -474,53 +520,56 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         await this.redisService.xGroupCreate(
           this.config.redis.streamKey,
           this.config.redis.consumerGroup,
-          '0',
-          { mkstream: true }
+          "0",
+          { mkstream: true },
         );
       } catch (error) {
         // Group might already exist
-        if (!error.message.includes('BUSYGROUP')) {
+        if (!error.message.includes("BUSYGROUP")) {
           throw error;
         }
       }
 
-      this.logger.log('Redis streams initialized');
+      this.logger.log("Redis streams initialized");
     } catch (error) {
-      this.logger.error(`Failed to initialize Redis streams: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to initialize Redis streams: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
 
   private async startEventProcessing(): Promise<void> {
     this.isProcessing = true;
-    
+
     // Start processing loop
     this.processingInterval = setInterval(() => {
-      this.processEvents().catch(error => {
+      this.processEvents().catch((error) => {
         this.logger.error(`Event processing loop error: ${error.message}`);
       });
     }, 1000);
 
-    this.logger.log('Event processing started');
+    this.logger.log("Event processing started");
   }
 
   private async startStateSynchronization(): Promise<void> {
     // Start state sync loop
     this.syncInterval = setInterval(() => {
-      this.synchronizeStates().catch(error => {
+      this.synchronizeStates().catch((error) => {
         this.logger.error(`State synchronization loop error: ${error.message}`);
       });
     }, this.config.sync.stateCheckInterval);
 
-    this.logger.log('State synchronization started');
+    this.logger.log("State synchronization started");
   }
 
   private setupEventListeners(): void {
     // Listen for local events and publish them to the stream
-    this.eventEmitter.on('workflow.created', (payload) => {
+    this.eventEmitter.on("workflow.created", (payload) => {
       this.publishEvent({
-        type: 'workflow.created',
-        source: 'orchestrator',
+        type: "workflow.created",
+        source: "orchestrator",
         tenantId: payload.tenantId,
         resourceId: payload.workflowId,
         payload,
@@ -528,8 +577,8 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
     });
 
     // Add more event listeners as needed...
-    
-    this.logger.log('Event listeners configured');
+
+    this.logger.log("Event listeners configured");
   }
 
   // Utility methods
@@ -538,16 +587,16 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private calculateChecksum(data: any): string {
-    return require('crypto')
-      .createHash('md5')
+    return require("crypto")
+      .createHash("md5")
       .update(JSON.stringify(data))
-      .digest('hex');
+      .digest("hex");
   }
 
   private calculateStateChanges(oldState: any, newState: any): any {
     // Simple implementation - could be enhanced with deep diff
     const changes = {};
-    
+
     for (const key in newState) {
       if (oldState?.[key] !== newState[key]) {
         changes[key] = {
@@ -556,7 +605,7 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         };
       }
     }
-    
+
     return changes;
   }
 
@@ -573,43 +622,44 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
     // Handle workflow state updates from other instances
     const { workflowId, tenantId } = event.payload;
     const localState = await this.getWorkflowState(tenantId, workflowId);
-    
+
     // Trigger WebSocket updates if needed
     await this.webSocketService.notifyWorkflowEvent(
       tenantId,
       workflowId,
-      'state_updated',
-      event.payload
+      "state_updated",
+      event.payload,
     );
   }
 
   private async handleExecutionStateUpdated(event: StreamEvent): Promise<void> {
     // Handle execution state updates from other instances
     const { executionId, tenantId, workflowId } = event.payload;
-    
+
     // Trigger WebSocket updates
     await this.webSocketService.notifyExecutionEvent(
       tenantId,
       executionId,
       workflowId,
-      'state_updated',
-      event.payload
+      "state_updated",
+      event.payload,
     );
   }
 
   private async handleExecutionStarted(event: StreamEvent): Promise<void> {
-    if (process.env.EXECUTION_ENGINE === 'nest') {
-      this.nestEngineService.execute(event.payload);
-    } else {
-      // TODO: Implement Go engine execution
-    }
+    const engine = this.executionEngineFactory.getEngine();
+    await engine.execute(
+      event.payload.workflowId,
+      event.payload.executionId,
+      event.payload,
+    );
 
     // Initialize execution state
     await this.updateExecutionState({
       executionId: event.payload.executionId,
       workflowId: event.payload.workflowId,
       tenantId: event.tenantId,
-      status: 'running',
+      status: "running",
       progress: {
         totalSteps: event.payload.totalSteps || 0,
         completedSteps: 0,
@@ -634,31 +684,37 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
 
   private async handleStepStarted(event: StreamEvent): Promise<void> {
     // Update execution state with step progress
-    const state = await this.getExecutionState(event.tenantId, event.payload.executionId);
+    const state = await this.getExecutionState(
+      event.tenantId,
+      event.payload.executionId,
+    );
     if (state) {
       state.progress.runningSteps++;
       state.currentStep = event.payload.stepId;
       state.stepStates[event.payload.stepId] = {
-        status: 'running',
+        status: "running",
         startedAt: event.timestamp,
       };
-      
+
       await this.updateExecutionState(state);
     }
   }
 
   private async handleStepCompleted(event: StreamEvent): Promise<void> {
     // Update execution state with step completion
-    const state = await this.getExecutionState(event.tenantId, event.payload.executionId);
+    const state = await this.getExecutionState(
+      event.tenantId,
+      event.payload.executionId,
+    );
     if (state) {
       state.progress.runningSteps--;
-      
-      if (event.payload.status === 'success') {
+
+      if (event.payload.status === "success") {
         state.progress.completedSteps++;
       } else {
         state.progress.failedSteps++;
       }
-      
+
       state.stepStates[event.payload.stepId] = {
         status: event.payload.status,
         startedAt: state.stepStates[event.payload.stepId]?.startedAt,
@@ -666,7 +722,7 @@ export class EventStreamingService implements OnModuleInit, OnModuleDestroy {
         output: event.payload.output,
         error: event.payload.error,
       };
-      
+
       await this.updateExecutionState(state);
     }
   }

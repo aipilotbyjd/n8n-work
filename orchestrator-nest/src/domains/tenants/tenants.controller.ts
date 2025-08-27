@@ -13,7 +13,7 @@ import {
   UseGuards,
   NotFoundException,
   ForbiddenException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -22,7 +22,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
   ApiBody,
-} from '@nestjs/swagger';
+} from "@nestjs/swagger";
 
 // DTOs for tenant operations
 class CreateTenantDto {
@@ -75,32 +75,29 @@ class Tenant {
   updatedAt: Date;
 }
 
-@ApiTags('Tenants')
-@Controller({ path: 'tenants', version: '1' })
-@ApiBearerAuth('JWT-auth')
+@ApiTags("Tenants")
+@Controller({ path: "tenants", version: "1" })
+@ApiBearerAuth("JWT-auth")
 export class TenantsController {
-  constructor(
-    // Note: TenantsService would need to be created
-    // private readonly tenantsService: TenantsService,
-  ) {}
+  constructor() {} // private readonly tenantsService: TenantsService, // Note: TenantsService would need to be created
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create tenant',
-    description: 'Creates a new tenant with specified quotas and settings',
+    summary: "Create tenant",
+    description: "Creates a new tenant with specified quotas and settings",
   })
   @ApiBody({
     type: CreateTenantDto,
-    description: 'Tenant configuration',
+    description: "Tenant configuration",
     examples: {
-      'basic-tenant': {
-        summary: 'Basic tenant configuration',
+      "basic-tenant": {
+        summary: "Basic tenant configuration",
         value: {
-          name: 'Acme Corporation',
-          description: 'Main tenant for Acme Corp workflows',
+          name: "Acme Corporation",
+          description: "Main tenant for Acme Corp workflows",
           settings: {
-            timezone: 'UTC',
+            timezone: "UTC",
             defaultNotificationSettings: {
               email: true,
               slack: false,
@@ -113,8 +110,8 @@ export class TenantsController {
             maxUsers: 50,
           },
           metadata: {
-            industry: 'technology',
-            plan: 'enterprise',
+            industry: "technology",
+            plan: "enterprise",
           },
         },
       },
@@ -122,248 +119,262 @@ export class TenantsController {
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'Tenant created successfully',
+    description: "Tenant created successfully",
     type: Tenant,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid tenant configuration',
+    description: "Invalid tenant configuration",
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Tenant with this name already exists',
+    description: "Tenant with this name already exists",
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Insufficient permissions to create tenant',
+    description: "Insufficient permissions to create tenant",
   })
-  async createTenant(@Body() createTenantDto: CreateTenantDto): Promise<Tenant> {
-    throw new Error('Implementation pending');
+  async createTenant(
+    @Body() createTenantDto: CreateTenantDto,
+  ): Promise<Tenant> {
+    throw new Error("Implementation pending");
   }
 
   @Get()
   @ApiOperation({
-    summary: 'List tenants',
-    description: 'Retrieves a list of tenants (admin only)',
+    summary: "List tenants",
+    description: "Retrieves a list of tenants (admin only)",
   })
   @ApiQuery({
-    name: 'page',
+    name: "page",
     required: false,
     type: Number,
-    description: 'Page number',
+    description: "Page number",
     example: 1,
   })
   @ApiQuery({
-    name: 'limit',
+    name: "limit",
     required: false,
     type: Number,
-    description: 'Items per page',
+    description: "Items per page",
     example: 20,
   })
   @ApiQuery({
-    name: 'search',
+    name: "search",
     required: false,
     type: String,
-    description: 'Search by tenant name',
+    description: "Search by tenant name",
   })
   @ApiQuery({
-    name: 'isActive',
+    name: "isActive",
     required: false,
     type: Boolean,
-    description: 'Filter by active status',
+    description: "Filter by active status",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'List of tenants retrieved successfully',
+    description: "List of tenants retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
         data: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/Tenant' },
+          type: "array",
+          items: { $ref: "#/components/schemas/Tenant" },
         },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        limit: { type: 'number' },
+        total: { type: "number" },
+        page: { type: "number" },
+        limit: { type: "number" },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Admin privileges required',
+    description: "Admin privileges required",
   })
   async listTenants(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
-    @Query('search') search?: string,
-    @Query('isActive') isActive?: boolean,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 20,
+    @Query("search") search?: string,
+    @Query("isActive") isActive?: boolean,
   ): Promise<{
     data: Tenant[];
     total: number;
     page: number;
     limit: number;
   }> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get('current')
+  @Get("current")
   @ApiOperation({
-    summary: 'Get current tenant',
-    description: 'Retrieves information about the current user\'s tenant',
+    summary: "Get current tenant",
+    description: "Retrieves information about the current user's tenant",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Current tenant information retrieved successfully',
+    description: "Current tenant information retrieved successfully",
     type: Tenant,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Authentication required',
+    description: "Authentication required",
   })
   async getCurrentTenant(): Promise<Tenant> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get(':id')
+  @Get(":id")
   @ApiOperation({
-    summary: 'Get tenant details',
-    description: 'Retrieves details of a specific tenant',
+    summary: "Get tenant details",
+    description: "Retrieves details of a specific tenant",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant details retrieved successfully',
+    description: "Tenant details retrieved successfully",
     type: Tenant,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found',
+    description: "Tenant not found",
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Access denied to this tenant',
+    description: "Access denied to this tenant",
   })
-  async getTenant(@Param('id', ParseUUIDPipe) id: string): Promise<Tenant> {
-    throw new Error('Implementation pending');
+  async getTenant(@Param("id", ParseUUIDPipe) id: string): Promise<Tenant> {
+    throw new Error("Implementation pending");
   }
 
-  @Put(':id')
+  @Put(":id")
   @ApiOperation({
-    summary: 'Update tenant',
-    description: 'Updates an existing tenant configuration',
+    summary: "Update tenant",
+    description: "Updates an existing tenant configuration",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiBody({
     type: UpdateTenantDto,
-    description: 'Updated tenant configuration',
+    description: "Updated tenant configuration",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant updated successfully',
+    description: "Tenant updated successfully",
     type: Tenant,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found',
+    description: "Tenant not found",
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Insufficient permissions to update tenant',
+    description: "Insufficient permissions to update tenant",
   })
   async updateTenant(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() updateTenantDto: UpdateTenantDto,
   ): Promise<Tenant> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Delete tenant',
-    description: 'Permanently deletes a tenant and all associated data',
+    summary: "Delete tenant",
+    description: "Permanently deletes a tenant and all associated data",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
-    description: 'Tenant deleted successfully',
+    description: "Tenant deleted successfully",
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found',
+    description: "Tenant not found",
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Insufficient permissions to delete tenant',
+    description: "Insufficient permissions to delete tenant",
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Cannot delete tenant with active workflows or users',
+    description: "Cannot delete tenant with active workflows or users",
   })
-  async deleteTenant(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    throw new Error('Implementation pending');
+  async deleteTenant(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+    throw new Error("Implementation pending");
   }
 
-  @Get(':id/quotas')
+  @Get(":id/quotas")
   @ApiOperation({
-    summary: 'Get tenant quotas',
-    description: 'Retrieves current quotas and usage for a tenant',
+    summary: "Get tenant quotas",
+    description: "Retrieves current quotas and usage for a tenant",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant quotas retrieved successfully',
+    description: "Tenant quotas retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        tenantId: { type: 'string' },
+        tenantId: { type: "string" },
         quotas: {
-          type: 'object',
+          type: "object",
           properties: {
-            maxWorkflows: { type: 'number' },
-            maxExecutionsPerMonth: { type: 'number' },
-            maxStorageMB: { type: 'number' },
-            maxUsers: { type: 'number' },
+            maxWorkflows: { type: "number" },
+            maxExecutionsPerMonth: { type: "number" },
+            maxStorageMB: { type: "number" },
+            maxUsers: { type: "number" },
           },
         },
         usage: {
-          type: 'object',
+          type: "object",
           properties: {
-            currentWorkflows: { type: 'number' },
-            executionsThisMonth: { type: 'number' },
-            storageUsedMB: { type: 'number' },
-            currentUsers: { type: 'number' },
+            currentWorkflows: { type: "number" },
+            executionsThisMonth: { type: "number" },
+            storageUsedMB: { type: "number" },
+            currentUsers: { type: "number" },
           },
         },
         quotaUtilization: {
-          type: 'object',
+          type: "object",
           properties: {
-            workflows: { type: 'number', description: 'Percentage of workflow quota used' },
-            executions: { type: 'number', description: 'Percentage of execution quota used' },
-            storage: { type: 'number', description: 'Percentage of storage quota used' },
-            users: { type: 'number', description: 'Percentage of user quota used' },
+            workflows: {
+              type: "number",
+              description: "Percentage of workflow quota used",
+            },
+            executions: {
+              type: "number",
+              description: "Percentage of execution quota used",
+            },
+            storage: {
+              type: "number",
+              description: "Percentage of storage quota used",
+            },
+            users: {
+              type: "number",
+              description: "Percentage of user quota used",
+            },
           },
         },
       },
     },
   })
-  async getTenantQuotas(@Param('id', ParseUUIDPipe) id: string): Promise<{
+  async getTenantQuotas(@Param("id", ParseUUIDPipe) id: string): Promise<{
     tenantId: string;
     quotas: {
       maxWorkflows: number;
@@ -384,88 +395,88 @@ export class TenantsController {
       users: number;
     };
   }> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Put(':id/quotas')
+  @Put(":id/quotas")
   @ApiOperation({
-    summary: 'Update tenant quotas',
-    description: 'Updates resource quotas for a tenant',
+    summary: "Update tenant quotas",
+    description: "Updates resource quotas for a tenant",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiBody({
     type: UpdateTenantQuotasDto,
-    description: 'Updated quota limits',
+    description: "Updated quota limits",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant quotas updated successfully',
+    description: "Tenant quotas updated successfully",
     type: Tenant,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found',
+    description: "Tenant not found",
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Insufficient permissions to update quotas',
+    description: "Insufficient permissions to update quotas",
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid quota values or would exceed current usage',
+    description: "Invalid quota values or would exceed current usage",
   })
   async updateTenantQuotas(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() updateQuotasDto: UpdateTenantQuotasDto,
   ): Promise<Tenant> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get(':id/usage-history')
+  @Get(":id/usage-history")
   @ApiOperation({
-    summary: 'Get tenant usage history',
-    description: 'Retrieves historical usage data for a tenant',
+    summary: "Get tenant usage history",
+    description: "Retrieves historical usage data for a tenant",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Tenant UUID',
+    description: "Tenant UUID",
   })
   @ApiQuery({
-    name: 'period',
+    name: "period",
     required: false,
-    enum: ['7d', '30d', '90d', '1y'],
-    description: 'Time period for usage history',
-    example: '30d',
+    enum: ["7d", "30d", "90d", "1y"],
+    description: "Time period for usage history",
+    example: "30d",
   })
   @ApiQuery({
-    name: 'metric',
+    name: "metric",
     required: false,
-    enum: ['executions', 'storage', 'workflows', 'users'],
-    description: 'Specific metric to retrieve',
+    enum: ["executions", "storage", "workflows", "users"],
+    description: "Specific metric to retrieve",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant usage history retrieved successfully',
+    description: "Tenant usage history retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        tenantId: { type: 'string' },
-        period: { type: 'string' },
+        tenantId: { type: "string" },
+        period: { type: "string" },
         data: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              date: { type: 'string', format: 'date' },
-              executions: { type: 'number' },
-              storageUsedMB: { type: 'number' },
-              activeWorkflows: { type: 'number' },
-              activeUsers: { type: 'number' },
+              date: { type: "string", format: "date" },
+              executions: { type: "number" },
+              storageUsedMB: { type: "number" },
+              activeWorkflows: { type: "number" },
+              activeUsers: { type: "number" },
             },
           },
         },
@@ -473,9 +484,9 @@ export class TenantsController {
     },
   })
   async getTenantUsageHistory(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query('period') period: string = '30d',
-    @Query('metric') metric?: string,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Query("period") period: string = "30d",
+    @Query("metric") metric?: string,
   ): Promise<{
     tenantId: string;
     period: string;
@@ -487,6 +498,6 @@ export class TenantsController {
       activeUsers: number;
     }>;
   }> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 }

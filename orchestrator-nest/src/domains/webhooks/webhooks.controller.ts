@@ -13,7 +13,7 @@ import {
   UseGuards,
   NotFoundException,
   BadRequestException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -22,14 +22,14 @@ import {
   ApiQuery,
   ApiBearerAuth,
   ApiBody,
-} from '@nestjs/swagger';
+} from "@nestjs/swagger";
 
 // DTOs for webhook operations
 class CreateWebhookDto {
   workflowId: string;
   name: string;
   url: string;
-  method?: string = 'POST';
+  method?: string = "POST";
   headers?: Record<string, string>;
   events: string[];
   isActive?: boolean = true;
@@ -76,41 +76,38 @@ class Webhook {
   updatedAt: Date;
 }
 
-@ApiTags('Webhooks')
-@Controller({ path: 'webhooks', version: '1' })
-@ApiBearerAuth('JWT-auth')
+@ApiTags("Webhooks")
+@Controller({ path: "webhooks", version: "1" })
+@ApiBearerAuth("JWT-auth")
 export class WebhooksController {
-  constructor(
-    // Note: WebhooksService would need to be created
-    // private readonly webhooksService: WebhooksService,
-  ) {}
+  constructor() {} // private readonly webhooksService: WebhooksService, // Note: WebhooksService would need to be created
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Register webhook',
-    description: 'Registers a new webhook for workflow events',
+    summary: "Register webhook",
+    description: "Registers a new webhook for workflow events",
   })
   @ApiBody({
     type: CreateWebhookDto,
-    description: 'Webhook configuration',
+    description: "Webhook configuration",
     examples: {
-      'workflow-completion': {
-        summary: 'Webhook for workflow completion',
+      "workflow-completion": {
+        summary: "Webhook for workflow completion",
         value: {
-          workflowId: '123e4567-e89b-12d3-a456-426614174000',
-          name: 'Workflow Completion Notification',
-          url: 'https://api.example.com/webhooks/workflow-completed',
-          method: 'POST',
-          events: ['workflow.completed', 'workflow.failed'],
+          workflowId: "123e4567-e89b-12d3-a456-426614174000",
+          name: "Workflow Completion Notification",
+          url: "https://api.example.com/webhooks/workflow-completed",
+          method: "POST",
+          events: ["workflow.completed", "workflow.failed"],
           isActive: true,
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer api-key-here',
+            "Content-Type": "application/json",
+            Authorization: "Bearer api-key-here",
           },
           retryPolicy: {
             maxRetries: 3,
-            backoffStrategy: 'exponential',
+            backoffStrategy: "exponential",
             initialDelay: 1000,
           },
         },
@@ -119,158 +116,163 @@ export class WebhooksController {
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'Webhook registered successfully',
+    description: "Webhook registered successfully",
     type: Webhook,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid webhook configuration',
+    description: "Invalid webhook configuration",
   })
-  async registerWebhook(@Body() createWebhookDto: CreateWebhookDto): Promise<Webhook> {
-    throw new Error('Implementation pending');
+  async registerWebhook(
+    @Body() createWebhookDto: CreateWebhookDto,
+  ): Promise<Webhook> {
+    throw new Error("Implementation pending");
   }
 
   @Get()
   @ApiOperation({
-    summary: 'List webhooks',
-    description: 'Retrieves a list of registered webhooks for the current tenant',
+    summary: "List webhooks",
+    description:
+      "Retrieves a list of registered webhooks for the current tenant",
   })
   @ApiQuery({
-    name: 'workflowId',
+    name: "workflowId",
     required: false,
     type: String,
-    description: 'Filter by workflow ID',
+    description: "Filter by workflow ID",
   })
   @ApiQuery({
-    name: 'isActive',
+    name: "isActive",
     required: false,
     type: Boolean,
-    description: 'Filter by active status',
+    description: "Filter by active status",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'List of webhooks retrieved successfully',
+    description: "List of webhooks retrieved successfully",
     type: [Webhook],
   })
   async listWebhooks(
-    @Query('workflowId') workflowId?: string,
-    @Query('isActive') isActive?: boolean,
+    @Query("workflowId") workflowId?: string,
+    @Query("isActive") isActive?: boolean,
   ): Promise<Webhook[]> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get(':id')
+  @Get(":id")
   @ApiOperation({
-    summary: 'Get webhook details',
-    description: 'Retrieves details of a specific webhook',
+    summary: "Get webhook details",
+    description: "Retrieves details of a specific webhook",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Webhook UUID',
+    description: "Webhook UUID",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Webhook details retrieved successfully',
+    description: "Webhook details retrieved successfully",
     type: Webhook,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Webhook not found',
+    description: "Webhook not found",
   })
-  async getWebhook(@Param('id', ParseUUIDPipe) id: string): Promise<Webhook> {
-    throw new Error('Implementation pending');
+  async getWebhook(@Param("id", ParseUUIDPipe) id: string): Promise<Webhook> {
+    throw new Error("Implementation pending");
   }
 
-  @Put(':id')
+  @Put(":id")
   @ApiOperation({
-    summary: 'Update webhook',
-    description: 'Updates an existing webhook configuration',
+    summary: "Update webhook",
+    description: "Updates an existing webhook configuration",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Webhook UUID',
+    description: "Webhook UUID",
   })
   @ApiBody({
     type: UpdateWebhookDto,
-    description: 'Updated webhook configuration',
+    description: "Updated webhook configuration",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Webhook updated successfully',
+    description: "Webhook updated successfully",
     type: Webhook,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Webhook not found',
+    description: "Webhook not found",
   })
   async updateWebhook(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() updateWebhookDto: UpdateWebhookDto,
   ): Promise<Webhook> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Unregister webhook',
-    description: 'Permanently removes a webhook registration',
+    summary: "Unregister webhook",
+    description: "Permanently removes a webhook registration",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Webhook UUID',
+    description: "Webhook UUID",
   })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
-    description: 'Webhook unregistered successfully',
+    description: "Webhook unregistered successfully",
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Webhook not found',
+    description: "Webhook not found",
   })
-  async unregisterWebhook(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    throw new Error('Implementation pending');
+  async unregisterWebhook(
+    @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    throw new Error("Implementation pending");
   }
 
-  @Post(':id/test')
+  @Post(":id/test")
   @ApiOperation({
-    summary: 'Test webhook',
-    description: 'Sends a test payload to the webhook endpoint',
+    summary: "Test webhook",
+    description: "Sends a test payload to the webhook endpoint",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Webhook UUID',
+    description: "Webhook UUID",
   })
   @ApiBody({
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
         testPayload: {
-          type: 'object',
-          description: 'Custom test payload to send',
+          type: "object",
+          description: "Custom test payload to send",
         },
       },
     },
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Test webhook triggered successfully',
+    description: "Test webhook triggered successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean' },
-        statusCode: { type: 'number' },
-        responseTime: { type: 'number' },
-        response: { type: 'string' },
+        success: { type: "boolean" },
+        statusCode: { type: "number" },
+        responseTime: { type: "number" },
+        response: { type: "string" },
       },
     },
   })
   async testWebhook(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { testPayload?: any },
   ): Promise<{
     success: boolean;
@@ -278,62 +280,62 @@ export class WebhooksController {
     responseTime: number;
     response: string;
   }> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 
-  @Get(':id/logs')
+  @Get(":id/logs")
   @ApiOperation({
-    summary: 'Get webhook delivery logs',
-    description: 'Retrieves delivery logs for a specific webhook',
+    summary: "Get webhook delivery logs",
+    description: "Retrieves delivery logs for a specific webhook",
   })
   @ApiParam({
-    name: 'id',
+    name: "id",
     type: String,
-    description: 'Webhook UUID',
+    description: "Webhook UUID",
   })
   @ApiQuery({
-    name: 'limit',
+    name: "limit",
     required: false,
     type: Number,
-    description: 'Number of logs to retrieve',
+    description: "Number of logs to retrieve",
     example: 50,
   })
   @ApiQuery({
-    name: 'status',
+    name: "status",
     required: false,
-    enum: ['success', 'failed', 'retry'],
-    description: 'Filter by delivery status',
+    enum: ["success", "failed", "retry"],
+    description: "Filter by delivery status",
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Webhook logs retrieved successfully',
+    description: "Webhook logs retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
         logs: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              id: { type: 'string' },
-              timestamp: { type: 'string', format: 'date-time' },
-              event: { type: 'string' },
-              status: { type: 'string', enum: ['success', 'failed', 'retry'] },
-              statusCode: { type: 'number' },
-              responseTime: { type: 'number' },
-              attempt: { type: 'number' },
-              error: { type: 'string' },
+              id: { type: "string" },
+              timestamp: { type: "string", format: "date-time" },
+              event: { type: "string" },
+              status: { type: "string", enum: ["success", "failed", "retry"] },
+              statusCode: { type: "number" },
+              responseTime: { type: "number" },
+              attempt: { type: "number" },
+              error: { type: "string" },
             },
           },
         },
-        total: { type: 'number' },
+        total: { type: "number" },
       },
     },
   })
   async getWebhookLogs(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query('limit') limit: number = 50,
-    @Query('status') status?: string,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Query("limit") limit: number = 50,
+    @Query("status") status?: string,
   ): Promise<{
     logs: Array<{
       id: string;
@@ -347,6 +349,6 @@ export class WebhooksController {
     }>;
     total: number;
   }> {
-    throw new Error('Implementation pending');
+    throw new Error("Implementation pending");
   }
 }

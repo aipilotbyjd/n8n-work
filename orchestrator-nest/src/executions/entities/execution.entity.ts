@@ -1,31 +1,39 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Workflow } from '../../domains/workflows/entities/workflow.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { Workflow } from "../../domains/workflows/entities/workflow.entity";
 
 export enum ExecutionStatus {
-  PENDING = 'pending',
-  RUNNING = 'running',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
-  TIMEOUT = 'timeout',
-  WAITING = 'waiting'
+  PENDING = "pending",
+  RUNNING = "running",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  TIMEOUT = "timeout",
+  WAITING = "waiting",
 }
 
-@Entity('executions')
+@Entity("executions")
 export class Execution {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   workflowId: string;
 
-  @Column('uuid')
+  @Column("uuid")
   tenantId: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: ExecutionStatus,
-    default: ExecutionStatus.PENDING
+    default: ExecutionStatus.PENDING,
   })
   status: ExecutionStatus;
 
@@ -35,13 +43,13 @@ export class Execution {
   @Column({ nullable: true })
   triggerType: string;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   triggerData: Record<string, any>;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   inputData: Record<string, any>;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   outputData: Record<string, any>;
 
   @Column({ nullable: true })
@@ -50,10 +58,10 @@ export class Execution {
   @Column({ nullable: true })
   errorCode: string;
 
-  @Column('bigint', { nullable: true })
+  @Column("bigint", { nullable: true })
   durationMs: number;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   metadata: Record<string, any>;
 
   @CreateDateColumn()
@@ -69,6 +77,6 @@ export class Execution {
   updatedAt: Date;
 
   @ManyToOne(() => Workflow, (workflow) => workflow.executions)
-  @JoinColumn({ name: 'workflowId' })
+  @JoinColumn({ name: "workflowId" })
   workflow: Workflow;
 }

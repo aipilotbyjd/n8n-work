@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { MetricsController } from './metrics.controller';
-import { MetricsService } from './metrics.service';
-import { AlertingService } from './alerting.service';
+import { Module } from "@nestjs/common";
+import { MetricsController } from "./metrics.controller";
+import { MetricsService } from "./metrics.service";
+import { AlertingService } from "./alerting.service";
 
 @Module({
   controllers: [MetricsController],

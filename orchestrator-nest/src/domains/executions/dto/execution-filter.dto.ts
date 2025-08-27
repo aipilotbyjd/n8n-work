@@ -1,19 +1,27 @@
-import { IsOptional, IsEnum, IsUUID, IsNumber, IsBoolean, Min, Max } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { ExecutionStatus, ExecutionMode } from '../entities/execution.entity';
+import {
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  IsNumber,
+  IsBoolean,
+  Min,
+  Max,
+} from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { ExecutionStatus, ExecutionMode } from "../entities/execution.entity";
 
 export class ExecutionFilterDto {
   @ApiPropertyOptional({
-    description: 'Filter by workflow ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: "Filter by workflow ID",
+    example: "550e8400-e29b-41d4-a716-446655440000",
   })
   @IsOptional()
   @IsUUID()
   workflowId?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by execution status',
+    description: "Filter by execution status",
     enum: ExecutionStatus,
     example: ExecutionStatus.SUCCESS,
   })
@@ -22,7 +30,7 @@ export class ExecutionFilterDto {
   status?: ExecutionStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter by execution mode',
+    description: "Filter by execution mode",
     enum: ExecutionMode,
     example: ExecutionMode.MANUAL,
   })
@@ -31,7 +39,7 @@ export class ExecutionFilterDto {
   mode?: ExecutionMode;
 
   @ApiPropertyOptional({
-    description: 'Number of results to return',
+    description: "Number of results to return",
     example: 50,
     minimum: 1,
     maximum: 100,
@@ -44,7 +52,7 @@ export class ExecutionFilterDto {
   limit?: number;
 
   @ApiPropertyOptional({
-    description: 'Number of results to skip',
+    description: "Number of results to skip",
     example: 0,
     minimum: 0,
   })
@@ -55,7 +63,7 @@ export class ExecutionFilterDto {
   offset?: number;
 
   @ApiPropertyOptional({
-    description: 'Include execution data in response',
+    description: "Include execution data in response",
     example: false,
   })
   @IsOptional()

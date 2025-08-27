@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-const cronParser = require('cron-parser');
-const cronValidate = require('cron-validate');
+import { Injectable, BadRequestException } from "@nestjs/common";
+const cronParser = require("cron-parser");
+const cronValidate = require("cron-validate");
 
 export interface CronParseResult {
   isValid: boolean;
@@ -36,17 +36,19 @@ export class CronParserService {
       // Validate cron expression
       const validation = this.validateCronExpression(cronExpression);
       if (!validation.isValid) {
-        throw new BadRequestException(`Invalid cron expression: ${validation.error}`);
+        throw new BadRequestException(
+          `Invalid cron expression: ${validation.error}`,
+        );
       }
 
       // Parse cron expression
       const options: any = {
         currentDate: new Date(),
-        tz: timezone || 'UTC',
+        tz: timezone || "UTC",
       };
 
       const interval = cronParser.parseExpression(cronExpression, options);
-      
+
       // Get next execution times
       const nextRuns: Date[] = [];
       for (let i = 0; i < nextRunsCount; i++) {
@@ -66,7 +68,9 @@ export class CronParserService {
         fields,
       };
     } catch (error) {
-      throw new BadRequestException(`Failed to parse cron expression: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to parse cron expression: ${error.message}`,
+      );
     }
   }
 
@@ -77,30 +81,32 @@ export class CronParserService {
     try {
       // Basic validation
       const result = cronValidate(cronExpression);
-      
+
       if (!result.isValid()) {
         return {
           isValid: false,
-          error: result.getError().join(', '),
+          error: result.getError().join(", "),
         };
       }
 
       // Additional custom validations
-      const fields = cronExpression.split(' ');
-      
+      const fields = cronExpression.split(" ");
+
       // Check for too frequent executions (every second)
-      if (fields.length === 6 && fields[0] === '*') {
+      if (fields.length === 6 && fields[0] === "*") {
         return {
           isValid: true,
-          warning: 'Cron expression runs every second. This may cause high system load.',
+          warning:
+            "Cron expression runs every second. This may cause high system load.",
         };
       }
 
       // Check for very frequent executions (every minute)
-      if (fields.length === 5 && fields[0] === '*' && fields[1] === '*') {
+      if (fields.length === 5 && fields[0] === "*" && fields[1] === "*") {
         return {
           isValid: true,
-          warning: 'Cron expression runs every minute. Consider if this frequency is necessary.',
+          warning:
+            "Cron expression runs every minute. Consider if this frequency is necessary.",
         };
       }
 
@@ -120,13 +126,15 @@ export class CronParserService {
     try {
       const options: any = {
         currentDate: new Date(),
-        tz: timezone || 'UTC',
+        tz: timezone || "UTC",
       };
 
       const interval = cronParser.parseExpression(cronExpression, options);
       return interval.next().toDate();
     } catch (error) {
-      throw new BadRequestException(`Failed to get next execution: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to get next execution: ${error.message}`,
+      );
     }
   }
 
@@ -141,19 +149,21 @@ export class CronParserService {
     try {
       const options: any = {
         currentDate: new Date(),
-        tz: timezone || 'UTC',
+        tz: timezone || "UTC",
       };
 
       const interval = cronParser.parseExpression(cronExpression, options);
       const executions: Date[] = [];
-      
+
       for (let i = 0; i < count; i++) {
         executions.push(interval.next().toDate());
       }
 
       return executions;
     } catch (error) {
-      throw new BadRequestException(`Failed to get next executions: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to get next executions: ${error.message}`,
+      );
     }
   }
 
@@ -165,11 +175,11 @@ export class CronParserService {
       const options: any = {
         currentDate: new Date(date.getTime() - 1000), // 1 second before
         endDate: new Date(date.getTime() + 1000), // 1 second after
-        tz: timezone || 'UTC',
+        tz: timezone || "UTC",
       };
 
       const interval = cronParser.parseExpression(cronExpression, options);
-      
+
       try {
         const next = interval.next().toDate();
         // Check if the next execution is within our time window
@@ -211,25 +221,49 @@ export class CronParserService {
   private getCronDescription(cronExpression: string): string {
     // This would integrate with a library like cronstrue for human-readable descriptions
     // For now, provide basic descriptions
-    const fields = cronExpression.split(' ');
-    
+    const fields = cronExpression.split(" ");
+
     if (fields.length === 5) {
       const [minute, hour, dayOfMonth, month, dayOfWeek] = fields;
-      
-      if (minute === '0' && hour === '0' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-        return 'Every day at midnight';
+
+      if (
+        minute === "0" &&
+        hour === "0" &&
+        dayOfMonth === "*" &&
+        month === "*" &&
+        dayOfWeek === "*"
+      ) {
+        return "Every day at midnight";
       }
-      
-      if (minute === '0' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+
+      if (
+        minute === "0" &&
+        hour !== "*" &&
+        dayOfMonth === "*" &&
+        month === "*" &&
+        dayOfWeek === "*"
+      ) {
         return `Every day at ${hour}:00`;
       }
-      
-      if (minute === '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-        return 'Every minute';
+
+      if (
+        minute === "*" &&
+        hour === "*" &&
+        dayOfMonth === "*" &&
+        month === "*" &&
+        dayOfWeek === "*"
+      ) {
+        return "Every minute";
       }
-      
-      if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-        return `Every day at ${hour}:${minute.padStart(2, '0')}`;
+
+      if (
+        minute !== "*" &&
+        hour !== "*" &&
+        dayOfMonth === "*" &&
+        month === "*" &&
+        dayOfWeek === "*"
+      ) {
+        return `Every day at ${hour}:${minute.padStart(2, "0")}`;
       }
     }
 
@@ -240,8 +274,8 @@ export class CronParserService {
    * Parse cron fields into structured format
    */
   private parseCronFields(cronExpression: string): any {
-    const fields = cronExpression.split(' ');
-    
+    const fields = cronExpression.split(" ");
+
     if (fields.length === 5) {
       return {
         minute: fields[0],
@@ -261,83 +295,87 @@ export class CronParserService {
       };
     }
 
-    throw new BadRequestException('Invalid cron expression format');
+    throw new BadRequestException("Invalid cron expression format");
   }
 
   /**
    * Generate common cron expressions
    */
-  getCommonCronExpressions(): Array<{ name: string; expression: string; description: string }> {
+  getCommonCronExpressions(): Array<{
+    name: string;
+    expression: string;
+    description: string;
+  }> {
     return [
       {
-        name: 'Every minute',
-        expression: '* * * * *',
-        description: 'Runs every minute',
+        name: "Every minute",
+        expression: "* * * * *",
+        description: "Runs every minute",
       },
       {
-        name: 'Every 5 minutes',
-        expression: '*/5 * * * *',
-        description: 'Runs every 5 minutes',
+        name: "Every 5 minutes",
+        expression: "*/5 * * * *",
+        description: "Runs every 5 minutes",
       },
       {
-        name: 'Every 15 minutes',
-        expression: '*/15 * * * *',
-        description: 'Runs every 15 minutes',
+        name: "Every 15 minutes",
+        expression: "*/15 * * * *",
+        description: "Runs every 15 minutes",
       },
       {
-        name: 'Every 30 minutes',
-        expression: '*/30 * * * *',
-        description: 'Runs every 30 minutes',
+        name: "Every 30 minutes",
+        expression: "*/30 * * * *",
+        description: "Runs every 30 minutes",
       },
       {
-        name: 'Every hour',
-        expression: '0 * * * *',
-        description: 'Runs at the start of every hour',
+        name: "Every hour",
+        expression: "0 * * * *",
+        description: "Runs at the start of every hour",
       },
       {
-        name: 'Every 6 hours',
-        expression: '0 */6 * * *',
-        description: 'Runs every 6 hours',
+        name: "Every 6 hours",
+        expression: "0 */6 * * *",
+        description: "Runs every 6 hours",
       },
       {
-        name: 'Every 12 hours',
-        expression: '0 */12 * * *',
-        description: 'Runs every 12 hours (noon and midnight)',
+        name: "Every 12 hours",
+        expression: "0 */12 * * *",
+        description: "Runs every 12 hours (noon and midnight)",
       },
       {
-        name: 'Daily at midnight',
-        expression: '0 0 * * *',
-        description: 'Runs every day at 00:00',
+        name: "Daily at midnight",
+        expression: "0 0 * * *",
+        description: "Runs every day at 00:00",
       },
       {
-        name: 'Daily at 9 AM',
-        expression: '0 9 * * *',
-        description: 'Runs every day at 09:00',
+        name: "Daily at 9 AM",
+        expression: "0 9 * * *",
+        description: "Runs every day at 09:00",
       },
       {
-        name: 'Weekdays at 9 AM',
-        expression: '0 9 * * 1-5',
-        description: 'Runs Monday to Friday at 09:00',
+        name: "Weekdays at 9 AM",
+        expression: "0 9 * * 1-5",
+        description: "Runs Monday to Friday at 09:00",
       },
       {
-        name: 'Weekly on Monday',
-        expression: '0 0 * * 1',
-        description: 'Runs every Monday at midnight',
+        name: "Weekly on Monday",
+        expression: "0 0 * * 1",
+        description: "Runs every Monday at midnight",
       },
       {
-        name: 'Monthly on 1st',
-        expression: '0 0 1 * *',
-        description: 'Runs on the 1st day of every month at midnight',
+        name: "Monthly on 1st",
+        expression: "0 0 1 * *",
+        description: "Runs on the 1st day of every month at midnight",
       },
       {
-        name: 'Quarterly',
-        expression: '0 0 1 */3 *',
-        description: 'Runs on the 1st day of every quarter at midnight',
+        name: "Quarterly",
+        expression: "0 0 1 */3 *",
+        description: "Runs on the 1st day of every quarter at midnight",
       },
       {
-        name: 'Yearly',
-        expression: '0 0 1 1 *',
-        description: 'Runs on January 1st at midnight',
+        name: "Yearly",
+        expression: "0 0 1 1 *",
+        description: "Runs on January 1st at midnight",
       },
     ];
   }

@@ -1,41 +1,50 @@
-import { IsString, IsOptional, IsEmail, IsObject, IsBoolean, IsNumber, Min, Max } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsObject,
+  IsBoolean,
+  IsNumber,
+  Min,
+  Max,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateTenantDto {
   @ApiProperty({
-    description: 'Tenant name',
-    example: 'Acme Corporation',
+    description: "Tenant name",
+    example: "Acme Corporation",
   })
   @IsString()
   name: string;
 
   @ApiPropertyOptional({
-    description: 'Tenant description',
-    example: 'Main production tenant for Acme Corporation',
+    description: "Tenant description",
+    example: "Main production tenant for Acme Corporation",
   })
   @IsOptional()
   @IsString()
   description?: string;
 
   @ApiPropertyOptional({
-    description: 'Tenant domain',
-    example: 'acme.com',
+    description: "Tenant domain",
+    example: "acme.com",
   })
   @IsOptional()
   @IsString()
   domain?: string;
 
   @ApiPropertyOptional({
-    description: 'Admin email for the tenant',
-    example: 'admin@acme.com',
+    description: "Admin email for the tenant",
+    example: "admin@acme.com",
   })
   @IsOptional()
   @IsEmail()
   adminEmail?: string;
 
   @ApiPropertyOptional({
-    description: 'Tenant configuration settings',
-    type: 'object',
+    description: "Tenant configuration settings",
+    type: "object",
   })
   @IsOptional()
   @IsObject()
@@ -48,7 +57,7 @@ export class CreateTenantDto {
   };
 
   @ApiPropertyOptional({
-    description: 'Whether tenant is active',
+    description: "Whether tenant is active",
     example: true,
   })
   @IsOptional()
@@ -56,7 +65,7 @@ export class CreateTenantDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Maximum number of users allowed',
+    description: "Maximum number of users allowed",
     example: 100,
   })
   @IsOptional()
@@ -66,8 +75,8 @@ export class CreateTenantDto {
   maxUsers?: number;
 
   @ApiPropertyOptional({
-    description: 'Billing plan identifier',
-    example: 'enterprise',
+    description: "Billing plan identifier",
+    example: "enterprise",
   })
   @IsOptional()
   @IsString()

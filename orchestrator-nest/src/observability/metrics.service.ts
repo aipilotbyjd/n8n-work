@@ -1,5 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { register, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
+import { Injectable } from "@nestjs/common";
+import {
+  register,
+  Counter,
+  Histogram,
+  Gauge,
+  collectDefaultMetrics,
+} from "prom-client";
 
 @Injectable()
 export class MetricsService {
@@ -19,11 +25,11 @@ export class MetricsService {
         name,
         help: `Counter for ${name}`,
         labelNames: labels ? Object.keys(labels) : [],
-        registers: [register]
+        registers: [register],
       });
       this.counters.set(name, counter);
     }
-    
+
     if (labels) {
       counter.inc(labels);
     } else {
@@ -38,11 +44,11 @@ export class MetricsService {
         name,
         help: `Gauge for ${name}`,
         labelNames: labels ? Object.keys(labels) : [],
-        registers: [register]
+        registers: [register],
       });
       this.gauges.set(name, gauge);
     }
-    
+
     if (labels) {
       gauge.set(labels, value);
     } else {
@@ -50,18 +56,22 @@ export class MetricsService {
     }
   }
 
-  recordHistogram(name: string, value: number, labels?: Record<string, string>): void {
+  recordHistogram(
+    name: string,
+    value: number,
+    labels?: Record<string, string>,
+  ): void {
     let histogram = this.histograms.get(name);
     if (!histogram) {
       histogram = new Histogram({
         name,
         help: `Histogram for ${name}`,
         labelNames: labels ? Object.keys(labels) : [],
-        registers: [register]
+        registers: [register],
       });
       this.histograms.set(name, histogram);
     }
-    
+
     if (labels) {
       histogram.observe(labels, value);
     } else {

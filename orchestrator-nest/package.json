@@ -22,8 +22,7 @@
     "migration:generate": "typeorm migration:generate -d src/config/database.config.ts",
     "migration:run": "typeorm migration:run -d src/config/database.config.ts",
     "migration:revert": "typeorm migration:revert -d src/config/database.config.ts",
-    "db:seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts",
-    "proto:gen": "cd ../proto-contracts && ./generate.ps1"
+        "db:seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^1.6.0",

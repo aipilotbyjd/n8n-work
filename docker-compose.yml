@@ -141,7 +141,6 @@ services:
       - "9090:9090"
     depends_on:
       - orchestrator-nest
-      - engine-go
       - node-runner-js
     networks:
       - n8n-work
@@ -209,49 +208,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # Engine Service (Go)
-  engine-go:
-    build:
-      context: ./engine-go
-      dockerfile: Dockerfile
-      target: development
-    container_name: n8n-work-engine
-    environment:
-      ENV: development
-      GRPC_PORT: 50052
-      HTTP_PORT: 8080
-      DATABASE_URL: postgresql://n8n_work:${POSTGRES_PASSWORD:-n8n_work_dev}@postgres:5432/engine
-      REDIS_URL: redis://redis:6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-n8n_work}:${RABBITMQ_PASSWORD:-n8n_work_dev}@rabbitmq:5672/n8n-work
-      JAEGER_ENDPOINT: http://jaeger:14268/api/traces
-      PROMETHEUS_PORT: 9091
-      ORCHESTRATOR_GRPC_URL: orchestrator-nest:50051
-      NODE_RUNNER_GRPC_URL: node-runner-js:50052
-    volumes:
-      - ./engine-go:/app
-      - ./proto-contracts:/app/proto-contracts
-    ports:
-      - "8080:8080"
-      - "50052:50052"
-      - "9091:9091"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      orchestrator-nest:
-        condition: service_healthy
-    networks:
-      - n8n-work
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # Node Runner Service (Node.js)
   node-runner-js:
     build:
@@ -268,7 +224,6 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-n8n_work_access}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-n8n_work_secret}
-      ENGINE_GRPC_URL: engine-go:50052
       SECURITY_SANDBOX_UID: 1000
       SECURITY_SANDBOX_GID: 1000
       MAX_CONCURRENT_EXECUTIONS: 10
@@ -285,8 +240,6 @@ services:
       - "50053:50053"
     depends_on:
       redis:
-        condition: service_healthy
-      engine-go:
         condition: service_healthy
     networks:
       - n8n-work

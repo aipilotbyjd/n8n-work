@@ -63,7 +63,7 @@ export class AIAgentsService {
       status: AIAgentStatus.INACTIVE,
     });
 
-    const savedAgent = (await this.aiAgentRepository.save(agent))[0];
+    const savedAgent = await this.aiAgentRepository.save(agent);
 
     // Initialize the agent (load model, check health, etc.)
     try {

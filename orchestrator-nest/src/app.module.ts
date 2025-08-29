@@ -124,6 +124,7 @@ import { ExecutionEngineModule } from './domains/execution-engine/execution-engi
     BillingModule,
     AuditModule,
     ExecutionEngineModule,
+    AiAgentsModule,
   ],
   controllers: [HealthController],
   providers: [
